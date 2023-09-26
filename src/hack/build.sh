@@ -24,7 +24,8 @@ build() {
   if [ ${target} = 'bililive' ]; then
     now=$(date '+%Y-%m-%d_%H:%M:%S')
     rev=$(echo "${rev:-$(git rev-parse HEAD)}")
-    ver=$(git describe --tags --always)
+    ver=$(git describe --tags --always | sed 's/\([^-]*\).*/\1/')
+
     debug_build_flags=""
     if [ ${TAGS} = 'release' ]; then
       debug_build_flags=" -s -w "
