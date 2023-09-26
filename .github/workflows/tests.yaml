@@ -1,37 +1,52 @@
-name: CI
+name: CI  # 工作流程的名称
+
 on:
-  push:
+  push:  # 当有代码推送到仓库时触发此工作流程
     branches:
-      - '*'
-  pull_request:
+      - '*'  # 匹配所有分支
+  pull_request:  # 当有 Pull Request 事件时触发此工作流程
     branches:
-      - '*'
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - '*'  # 匹配所有分支
+
+jobs:  # 工作流程包含两个任务：build 和 test
+
+  build:  # 第一个任务名称
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 系统作为运行环境
+
+    steps:  # 任务步骤
+
+      - name: Checkout  # 步骤名称
+        uses: actions/checkout@v2  # 使用 GitHub 提供的 actions/checkout@v2 操作，将代码仓库内容检出到工作环境中
+
+      - name: Set up Go  # 步骤名称
+        uses: actions/setup-go@v2  # 设置 Go 编程语言的环境
         with:
-          go-version: 1.19
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v2.4.0
-      - name: Build
-        run: make build-web bililive
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
+          go-version: 1.19  # 指定 Go 的版本
+
+      - name: Setup Node.js environment  # 步骤名称
+        uses: actions/setup-node@v2.4.0  # 设置 Node.js 环境
+
+      - name: Build  # 步骤名称
+        run: make build-web bililive  # 执行构建命令，可能是构建 Web 页面和其他内容
+
+  test:  # 第二个任务名称
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 系统作为运行环境
+
+    steps:  # 任务步骤
+
+      - name: Checkout  # 步骤名称
+        uses: actions/checkout@v2  # 使用 GitHub 提供的 actions/checkout@v2 操作，将代码仓库内容检出到工作环境中
+
+      - name: Set up Go  # 步骤名称
+        uses: actions/setup-go@v2  # 设置 Go 编程语言的环境
         with:
-          go-version: 1.19
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v2.4.0
-      - name: Test
-        run: make build-web test
-      - name: Codecov
-        uses: codecov/codecov-action@v2
+          go-version: 1.19  # 指定 Go 的版本
+
+      - name: Setup Node.js environment  # 步骤名称
+        uses: actions/setup-node@v2.4.0  # 设置 Node.js 环境
+
+      - name: Test  # 步骤名称
+        run: make build-web test  # 执行测试命令，可能是构建 Web 页面并运行测试
+
+      - name: Codecov  # 步骤名称
+        uses: codecov/codecov-action@v2  # 使用 Codecov 的 GitHub Action，用于代码覆盖率报告
