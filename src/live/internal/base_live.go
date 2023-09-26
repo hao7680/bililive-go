@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/utils"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
 )
 
 type BaseLive struct {

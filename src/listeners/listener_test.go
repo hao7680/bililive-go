@@ -9,13 +9,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yuhao_hwang/bililive-go/src/configs"
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	livepkg "github.com/yuhao_hwang/bililive-go/src/live"
-	livemock "github.com/yuhao_hwang/bililive-go/src/live/mock"
-	"github.com/yuhao_hwang/bililive-go/src/log"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/events"
-	evtmock "github.com/yuhao_hwang/bililive-go/src/pkg/events/mock"
+	"github.com/yuhaohwang/bililive-go/src/configs"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	livepkg "github.com/yuhaohwang/bililive-go/src/live"
+	livemock "github.com/yuhaohwang/bililive-go/src/live/mock"
+	"github.com/yuhaohwang/bililive-go/src/log"
+	"github.com/yuhaohwang/bililive-go/src/pkg/events"
+	evtmock "github.com/yuhaohwang/bililive-go/src/pkg/events/mock"
 )
 
 func TestRefresh(t *testing.T) {

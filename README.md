@@ -1,14 +1,14 @@
 # Bililive-go
 
-[![CI](https://github.com/yuhao_hwang/bililive-go/actions/workflows/tests.yaml/badge.svg?branch=master)](https://github.com/yuhao_hwang/bililive-go/actions/workflows/tests.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yuhao_hwang/bililive-go)](https://goreportcard.com/report/github.com/yuhao_hwang/bililive-go)
-[![Github release](https://img.shields.io/github/release/hr3lxphr6j/bililive-go.svg)](https://github.com/yuhao_hwang/bililive-go/releases/latest)
+[![CI](https://github.com/yuhaohwang/bililive-go/actions/workflows/tests.yaml/badge.svg?branch=master)](https://github.com/yuhaohwang/bililive-go/actions/workflows/tests.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yuhaohwang/bililive-go)](https://goreportcard.com/report/github.com/yuhaohwang/bililive-go)
+[![Github release](https://img.shields.io/github/release/hr3lxphr6j/bililive-go.svg)](https://github.com/yuhaohwang/bililive-go/releases/latest)
 [![Docker Pulls](https://img.shields.io/docker/pulls/chigusa/bililive-go.svg)](https://hub.docker.com/r/chigusa/bililive-go/)
 [![Bilibili](https://img.shields.io/badge/%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9-%E6%9C%AA%E6%9D%A5%E7%A7%91%E6%8A%80%E7%8E%8B%E8%80%81%E8%8F%8A%E5%BD%95%E6%92%AD%E7%BB%84-ebb8d0.svg)](https://space.bilibili.com/18578203/)
 
 Bililive-go是一个支持多种直播平台的直播录制工具
 
-![image](https://github.com/yuhao_hwang/bililive-go/raw/master/docs/screenshot.webp)
+![image](https://github.com/yuhaohwang/bililive-go/raw/master/docs/screenshot.webp)
 
 ## 支持网站
 
@@ -154,7 +154,7 @@ cookies:
 
 > 请自行部署 prometheus 和 grafana
 
-![image](https://github.com/yuhao_hwang/bililive-go/raw/master/docs/dashboard.webp)
+![image](https://github.com/yuhaohwang/bililive-go/raw/master/docs/dashboard.webp)
 
 ## 依赖
 
@@ -192,7 +192,7 @@ cookies:
     6) yum repolist
     7) yum install -y ffmpeg
 二、克隆代码并编译(linux环境)  
-   1. git clone https://github.com/yuhao_hwang/bililive-go.git
+   1. git clone https://github.com/yuhaohwang/bililive-go.git
    2. cd bililive-go
    3. make build-web
    4. make 
@@ -204,11 +204,11 @@ cookies:
 
 ## Wiki
 
-[Wiki](https://github.com/yuhao_hwang/bililive-go/wiki)
+[Wiki](https://github.com/yuhaohwang/bililive-go/wiki)
 
 ## API
 
-[API doc](https://github.com/yuhao_hwang/bililive-go/blob/master/docs/API.md)
+[API doc](https://github.com/yuhaohwang/bililive-go/blob/master/docs/API.md)
 
 ## 参考
 

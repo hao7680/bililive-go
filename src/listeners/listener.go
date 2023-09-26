@@ -1,4 +1,4 @@
-//go:generate mockgen -package listeners -destination mock_test.go github.com/yuhao_hwang/bililive-go/src/listeners Listener,Manager
+//go:generate mockgen -package listeners -destination mock_test.go github.com/yuhaohwang/bililive-go/src/listeners Listener,Manager
 package listeners
 
 import (
@@ -8,12 +8,12 @@ import (
 
 	"github.com/lthibault/jitterbug"
 
-	"github.com/yuhao_hwang/bililive-go/src/configs"
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	"github.com/yuhao_hwang/bililive-go/src/interfaces"
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/live/system"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/events"
+	"github.com/yuhaohwang/bililive-go/src/configs"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	"github.com/yuhaohwang/bililive-go/src/interfaces"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/live/system"
+	"github.com/yuhaohwang/bililive-go/src/pkg/events"
 )
 
 const (

@@ -3,8 +3,8 @@ package system
 import (
 	"net/url"
 
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/live/internal"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/live/internal"
 )
 
 func init() {

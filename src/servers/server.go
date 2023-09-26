@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	"github.com/yuhao_hwang/bililive-go/src/webapp"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	"github.com/yuhaohwang/bililive-go/src/webapp"
 )
 
 const (

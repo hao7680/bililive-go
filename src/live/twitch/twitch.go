@@ -10,8 +10,8 @@ import (
 	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
 
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/live/internal"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/live/internal"
 )
 
 const (

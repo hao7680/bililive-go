@@ -1,4 +1,4 @@
-//go:generate mockgen -package mock -destination mock/mock.go github.com/yuhao_hwang/bililive-go/src/pkg/parser Parser
+//go:generate mockgen -package mock -destination mock/mock.go github.com/yuhaohwang/bililive-go/src/pkg/parser Parser
 package parser
 
 import (
@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/yuhao_hwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/live"
 )
 
 type Builder interface {

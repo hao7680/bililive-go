@@ -10,8 +10,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	"github.com/yuhao_hwang/bililive-go/src/interfaces"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	"github.com/yuhaohwang/bililive-go/src/interfaces"
 )
 
 func New(ctx context.Context) *interfaces.Logger {

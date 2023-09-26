@@ -12,19 +12,19 @@ import (
 
 	"github.com/bluele/gcache"
 
-	_ "github.com/yuhao_hwang/bililive-go/src/cmd/bililive/internal"
-	"github.com/yuhao_hwang/bililive-go/src/cmd/bililive/internal/flag"
-	"github.com/yuhao_hwang/bililive-go/src/configs"
-	"github.com/yuhao_hwang/bililive-go/src/consts"
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	"github.com/yuhao_hwang/bililive-go/src/listeners"
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/log"
-	"github.com/yuhao_hwang/bililive-go/src/metrics"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/events"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/utils"
-	"github.com/yuhao_hwang/bililive-go/src/recorders"
-	"github.com/yuhao_hwang/bililive-go/src/servers"
+	_ "github.com/yuhaohwang/bililive-go/src/cmd/bililive/internal"
+	"github.com/yuhaohwang/bililive-go/src/cmd/bililive/internal/flag"
+	"github.com/yuhaohwang/bililive-go/src/configs"
+	"github.com/yuhaohwang/bililive-go/src/consts"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	"github.com/yuhaohwang/bililive-go/src/listeners"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/log"
+	"github.com/yuhaohwang/bililive-go/src/metrics"
+	"github.com/yuhaohwang/bililive-go/src/pkg/events"
+	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
+	"github.com/yuhaohwang/bililive-go/src/recorders"
+	"github.com/yuhaohwang/bililive-go/src/servers"
 )
 
 func getConfig() (*configs.Config, error) {

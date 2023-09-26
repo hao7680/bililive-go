@@ -7,9 +7,9 @@ import (
 
 	"github.com/hr3lxphr6j/requests"
 
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/live/internal"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/utils"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/live/internal"
+	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
 )
 
 const (

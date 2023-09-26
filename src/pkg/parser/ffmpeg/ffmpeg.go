@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yuhao_hwang/bililive-go/src/instance"
-	"github.com/yuhao_hwang/bililive-go/src/live"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/parser"
-	"github.com/yuhao_hwang/bililive-go/src/pkg/utils"
+	"github.com/yuhaohwang/bililive-go/src/instance"
+	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/pkg/parser"
+	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
 )
 
 const (
