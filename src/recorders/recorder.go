@@ -1,4 +1,4 @@
-//go:generate mockgen -package recorders -destination mock_test.go github.com/hr3lxphr6j/bililive-go/src/recorders Recorder,Manager
+//go:generate mockgen -package recorders -destination mock_test.go github.com/yuhao_hwang/bililive-go/src/recorders Recorder,Manager
 package recorders
 
 import (
@@ -20,15 +20,15 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/sirupsen/logrus"
 
-	"github.com/hr3lxphr6j/bililive-go/src/configs"
-	"github.com/hr3lxphr6j/bililive-go/src/instance"
-	"github.com/hr3lxphr6j/bililive-go/src/interfaces"
-	"github.com/hr3lxphr6j/bililive-go/src/live"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/events"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/parser"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/parser/ffmpeg"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/parser/native/flv"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/utils"
+	"github.com/yuhao_hwang/bililive-go/src/configs"
+	"github.com/yuhao_hwang/bililive-go/src/instance"
+	"github.com/yuhao_hwang/bililive-go/src/interfaces"
+	"github.com/yuhao_hwang/bililive-go/src/live"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/events"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/parser"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/parser/ffmpeg"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/parser/native/flv"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/utils"
 )
 
 const (

@@ -13,7 +13,7 @@ RUN mkdir -p $OUTPUT_DIR && \
 
 RUN sh -c 'case $(arch) in aarch64) go_arch=arm64 ;; arm*) go_arch=arm ;; i386|i686) go_arch=386 ;; x86_64) go_arch=amd64;; esac && \
     cd /tmp && \
-    curl -sSLO https://github.com/hr3lxphr6j/bililive-go/releases/download/${tag}/bililive-linux-${go_arch}.tar.gz && \
+    curl -sSLO https://github.com/yuhao_hwang/bililive-go/releases/download/${tag}/bililive-linux-${go_arch}.tar.gz && \
     tar zxvf bililive-linux-${go_arch}.tar.gz bililive-linux-${go_arch} && \
     chmod +x bililive-linux-${go_arch} && \
     mv ./bililive-linux-${go_arch} /usr/bin/bililive-go && \

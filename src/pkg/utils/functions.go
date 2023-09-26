@@ -4,7 +4,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig"
-	"github.com/hr3lxphr6j/bililive-go/src/configs"
+	"github.com/yuhao_hwang/bililive-go/src/configs"
 )
 
 func getFunctionList(config *configs.Config) map[string]interface{} {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hr3lxphr6j/bililive-go/src/instance"
-	"github.com/hr3lxphr6j/bililive-go/src/interfaces"
-	"github.com/hr3lxphr6j/bililive-go/src/live"
-	"github.com/hr3lxphr6j/bililive-go/src/pkg/events"
+	"github.com/yuhao_hwang/bililive-go/src/instance"
+	"github.com/yuhao_hwang/bililive-go/src/interfaces"
+	"github.com/yuhao_hwang/bililive-go/src/live"
+	"github.com/yuhao_hwang/bililive-go/src/pkg/events"
 )
 
 // for test

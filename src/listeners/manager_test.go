@@ -8,11 +8,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/hr3lxphr6j/bililive-go/src/configs"
-	"github.com/hr3lxphr6j/bililive-go/src/instance"
-	"github.com/hr3lxphr6j/bililive-go/src/live"
-	livemock "github.com/hr3lxphr6j/bililive-go/src/live/mock"
-	evtmock "github.com/hr3lxphr6j/bililive-go/src/pkg/events/mock"
+	"github.com/yuhao_hwang/bililive-go/src/configs"
+	"github.com/yuhao_hwang/bililive-go/src/instance"
+	"github.com/yuhao_hwang/bililive-go/src/live"
+	livemock "github.com/yuhao_hwang/bililive-go/src/live/mock"
+	evtmock "github.com/yuhao_hwang/bililive-go/src/pkg/events/mock"
 )
 
 func TestManagerAddAndRemoveListener(t *testing.T) {
