@@ -1,11 +1,12 @@
 # Bililive-go
+
 [![CI](https://github.com/hr3lxphr6j/bililive-go/actions/workflows/tests.yaml/badge.svg?branch=master)](https://github.com/hr3lxphr6j/bililive-go/actions/workflows/tests.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hr3lxphr6j/bililive-go)](https://goreportcard.com/report/github.com/hr3lxphr6j/bililive-go)
 [![Github release](https://img.shields.io/github/release/hr3lxphr6j/bililive-go.svg)](https://github.com/hr3lxphr6j/bililive-go/releases/latest)
 [![Docker Pulls](https://img.shields.io/docker/pulls/chigusa/bililive-go.svg)](https://hub.docker.com/r/chigusa/bililive-go/)
 [![Bilibili](https://img.shields.io/badge/%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9-%E6%9C%AA%E6%9D%A5%E7%A7%91%E6%8A%80%E7%8E%8B%E8%80%81%E8%8F%8A%E5%BD%95%E6%92%AD%E7%BB%84-ebb8d0.svg)](https://space.bilibili.com/18578203/)
 
-Bililive-go是一个支持多种直播平台的直播录制工具   
+Bililive-go是一个支持多种直播平台的直播录制工具
 
 ![image](https://github.com/hr3lxphr6j/bililive-go/raw/master/docs/screenshot.webp)
 
@@ -143,6 +144,7 @@ Bililive-go是一个支持多种直播平台的直播录制工具
 ### cookie 在 config.yml 中的设置方法
 
 cookie的设置以域名为单位。比如想在录制抖音直播时使用 cookie，那么 config.yml 中可以像下面这样写：
+
 ```
 cookies:
   live.douyin.com: __ac_nonce=123456789012345678903;name=value
@@ -155,19 +157,22 @@ cookies:
 ![image](https://github.com/hr3lxphr6j/bililive-go/raw/master/docs/dashboard.webp)
 
 ## 依赖
+
 * [ffmpeg](https://ffmpeg.org/)
 
 ## 使用例子
+
 - 本地
-    ```
-    ./bililive-go -i https://live.bilibili.com/1030 -i https://www.douyu.com/6655
-    ```
+  ```
+  ./bililive-go -i https://live.bilibili.com/1030 -i https://www.douyu.com/6655
+  ```
 - docker
-    ```
-    docker run --restart=always -v ~/config.yml:/etc/bililive-go/config.yml -v ~/Videos:/srv/bililive -p 8080:8080 -d chigusa/bililive-go
-    ```
+  ```
+  docker run --restart=always -v ~/config.yml:/etc/bililive-go/config.yml -v ~/Videos:/srv/bililive -p 8080:8080 -d chigusa/bililive-go
+  ```
 
 ## 开发环境搭建（linux系统）
+
 ```
 一、环境准备
   1. 前端环境
@@ -186,7 +191,7 @@ cookies:
     5) rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-1.el7.nux.noarch.rpm
     6) yum repolist
     7) yum install -y ffmpeg
-二、克隆代码并编译(linux环境)    
+二、克隆代码并编译(linux环境)  
    1. git clone https://github.com/hr3lxphr6j/bililive-go.git
    2. cd bililive-go
    3. make build-web
@@ -198,12 +203,15 @@ cookies:
 ```
 
 ## Wiki
+
 [Wiki](https://github.com/hr3lxphr6j/bililive-go/wiki)
 
 ## API
+
 [API doc](https://github.com/hr3lxphr6j/bililive-go/blob/master/docs/API.md)
 
 ## 参考
+
 - [you-get](https://github.com/soimort/you-get)
 - [ykdl](https://github.com/zhangn1985/ykdl)
 - [youtube-dl](https://github.com/ytdl-org/youtube-dl)

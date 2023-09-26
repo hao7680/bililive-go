@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 
 IMAGE_NAME=yuhaohwang/bililive-go
-VERSION=$(git describe --tags --always | sed 's/\([^-]*\).*/\1/')
+VERSION=$(git describe --tags --abbrev=0)
 
 IMAGE_TAG=$IMAGE_NAME:$VERSION
 

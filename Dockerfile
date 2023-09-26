@@ -12,12 +12,13 @@ RUN mkdir -p $OUTPUT_DIR && \
     cp -r -f /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 RUN sh -c 'case $(arch) in aarch64) go_arch=arm64 ;; arm*) go_arch=arm ;; i386|i686) go_arch=386 ;; x86_64) go_arch=amd64;; esac && \
-    cd /tmp && curl -sSLO https://github.com/hr3lxphr6j/bililive-go/releases/download/v0.7.17/bililive-linux-${go_arch}.tar.gz && \
+    cd /tmp && \
+    curl -sSLO https://github.com/hr3lxphr6j/bililive-go/releases/download/${tag}/bililive-linux-${go_arch}.tar.gz && \
     tar zxvf bililive-linux-${go_arch}.tar.gz bililive-linux-${go_arch} && \
     chmod +x bililive-linux-${go_arch} && \
     mv ./bililive-linux-${go_arch} /usr/bin/bililive-go && \
     rm ./bililive-linux-${go_arch}.tar.gz' && \
-    sh -c 'if [ "v0.7.17" != $(/usr/bin/bililive-go --version | tr -d '\n') ]; then exit 1; fi'
+    sh -c 'if [ ${tag} != $(/usr/bin/bililive-go --version | tr -d '\n') ]; then exit 1; fi'
 
 COPY config.docker.yml $CONF_DIR/config.yml
 
