@@ -406,7 +406,8 @@ func getFileInfo(writer http.ResponseWriter, r *http.Request) {
 		Files []jsonFile `json:"files"`
 		Path  string     `json:"path`
 	}{
-		Path: path,
+		Files: jsonFiles,
+		Path:  path,
 	}
 	for i, file := range files {
 		jsonFiles[i].IsFolder = file.IsDir()
