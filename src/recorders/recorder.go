@@ -173,13 +173,37 @@ func (r *recorder) tryRecord(ctx context.Context) {
 	// 设置并关闭当前解析器
 	r.setAndCloseParser(p)
 
+	// metadata.json
+	// 如果 fileName 有扩展名，则替换为 ".json"，否则添加 ".json"
+	ext := filepath.Ext(fileName)
+	jsonFilePath := ""
+	if ext != "" {
+		// 有扩展名，直接替换为 ".metadata.json"
+		jsonFilePath = fileName[:len(fileName)-len(ext)] + ".metadata.json"
+	} else {
+		// 没有扩展名，直接加上 ".metadata.json"
+		jsonFilePath = fileName + ".metadata.json"
+	}
+
 	// 记录开始时间
 	r.startTime = time.Now()
-	r.getLogger().Debugln("开始解析直播流(" + url.String() + ", " + fileName + ")")
-	r.getLogger().Debugln("开始解析直播流(" + url.String() + ", " + fileName + ")")
-	r.getLogger().Println(r.Live.GetRawUrl())
-	r.getLogger().Println(r.parser.ParseLiveStream(ctx, url, r.Live, fileName))
-	r.getLogger().Debugln("结束解析直播流(" + url.String() + ", " + fileName + ")")
+	r.getLogger().Info("开始解析直播流(" + url.String() + ", " + fileName + ")")
+
+	jsonData := info
+	jsonData.Recording = true
+	// 保存 JSON 数据到文件
+	r.saveJSONToFile(jsonFilePath, jsonData)
+
+	// 解析直播流并记录结果
+	result := r.parser.ParseLiveStream(ctx, url, r.Live, fileName)
+	r.getLogger().Println(result)
+
+	// 记录结束时间
+	r.getLogger().Info("结束解析直播流(" + url.String() + ", " + fileName + ")")
+
+	jsonData.Recording = false
+	// 再次保存 JSON 数据到文件
+	r.saveJSONToFile(jsonFilePath, jsonData)
 
 	// 移除空文件
 	removeEmptyFile(fileName)
@@ -345,4 +369,23 @@ func (r *recorder) GetStatus() (map[string]string, error) {
 		return nil, ErrParserNotSupportStatus
 	}
 	return statusP.Status()
+}
+
+// saveJSONToFile 将 JSON 数据保存到文件
+func (r *recorder) saveJSONToFile(jsonFilePath string, info *live.Info) error {
+
+	// 将 info 结构体转换为 JSON 格式
+	jsonData, err := info.MarshalJSON()
+	if err != nil {
+		r.getLogger().Info("编码JSON时发生错误:", err)
+	}
+
+	// 保存 JSON 数据到文件，覆盖同名文件
+	err = os.WriteFile(jsonFilePath, jsonData, 0644)
+	if err != nil {
+		r.getLogger().Info("写入METADATA JSON文件时发生错误:", err)
+	}
+
+	r.getLogger().Info("已保存METADATA JSON至:", jsonFilePath)
+	return nil
 }
