@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -54,6 +54,7 @@ type Live struct {
 	isUsingLegacy               bool
 }
 
+// getLiveRoomWebPageResponse 获取直播房间网页响应
 func (l *Live) getLiveRoomWebPageResponse() (body string, err error) {
 	cookies := l.Options.Cookies.Cookies(l.Url)
 	cookieKVs := make(map[string]string)
@@ -65,12 +66,6 @@ func (l *Live) getLiveRoomWebPageResponse() (body string, err error) {
 		cookieKVs[item.Name] = item.Value
 	}
 
-	// proxy, _ := url.Parse("http://localhost:8888")
-	// resp, err := requests.NewSession(&http.Client{
-	// 	Transport: &http.Transport{
-	// 		Proxy: http.ProxyURL(proxy),
-	// 	},
-	// }).Get(
 	resp, err := requests.Get(
 		l.Url.String(),
 		live.CommonUserAgent,
@@ -88,15 +83,16 @@ func (l *Live) getLiveRoomWebPageResponse() (body string, err error) {
 			l.responseCookies[cookie.Name] = cookie.Value
 		}
 	default:
-		err = fmt.Errorf("failed to get page, code: %v, %w", code, live.ErrInternalError)
+		err = fmt.Errorf("获取网页失败，状态码：%v，%w", code, live.ErrInternalError)
 		return
 	}
 	body, err = resp.Text()
 	return
 }
 
+// getRoomInfoFromBody 从网页响应体中解析房间信息
 func (l *Live) getRoomInfoFromBody(body string) (info *live.Info, streamUrlInfos []live.StreamUrlInfo, err error) {
-	const errorMessageForErrorf = "getRoomInfoFromBody() failed on step %d"
+	const errorMessageForErrorf = "getRoomInfoFromBody() 失败，步骤 %d"
 	stepNumberForLog := 1
 	mainInfoLine := utils.Match1(mainInfoLineCatcherRegex, body)
 	if mainInfoLine == "" {
@@ -108,13 +104,13 @@ func (l *Live) getRoomInfoFromBody(body string) (info *live.Info, streamUrlInfos
 	// 获取房间信息
 	mainJson := gjson.Parse(fmt.Sprintf(`"%s"`, mainInfoLine))
 	if !mainJson.Exists() {
-		err = fmt.Errorf(errorMessageForErrorf+". Invalid json: %s", stepNumberForLog, mainInfoLine)
+		err = fmt.Errorf(errorMessageForErrorf+". 无效的 JSON：%s", stepNumberForLog, mainInfoLine)
 		return
 	}
 
 	mainJson = gjson.Parse(mainJson.String()).Get("3")
 	if !mainJson.Exists() {
-		err = fmt.Errorf(errorMessageForErrorf+". Main json does not exist: %s", stepNumberForLog, mainInfoLine)
+		err = fmt.Errorf(errorMessageForErrorf+". 主 JSON 不存在：%s", stepNumberForLog, mainInfoLine)
 		return
 	}
 
@@ -134,7 +130,7 @@ func (l *Live) getRoomInfoFromBody(body string) (info *live.Info, streamUrlInfos
 	streamIdPath := "state.streamStore.streamData.H264_streamData.common.stream"
 	streamId := mainJson.Get(streamIdPath).String()
 	if streamId == "" {
-		err = fmt.Errorf(errorMessageForErrorf+". %s does not exist: %s", stepNumberForLog, streamIdPath, mainInfoLine)
+		err = fmt.Errorf(errorMessageForErrorf+". %s 不存在：%s", stepNumberForLog, streamIdPath, mainInfoLine)
 		return
 	}
 	stepNumberForLog++
@@ -158,12 +154,12 @@ func (l *Live) getRoomInfoFromBody(body string) (info *live.Info, streamUrlInfos
 		}
 		commonJson := gjson.Parse(gjson.Parse(fmt.Sprintf(`"%s"`, item[1])).String())
 		if !commonJson.Exists() {
-			err = fmt.Errorf(errorMessageForErrorf+". Not valid json: %s", stepNumberForLog, item[1])
+			err = fmt.Errorf(errorMessageForErrorf+". 无效的 JSON：%s", stepNumberForLog, item[1])
 			return
 		}
 		commonStreamId := commonJson.Get("common.stream").String()
 		if commonStreamId == "" {
-			err = fmt.Errorf(errorMessageForErrorf+". No valid common stream ID: %s", stepNumberForLog, item[1])
+			err = fmt.Errorf(errorMessageForErrorf+". 无效的 common stream ID：%s", stepNumberForLog, item[1])
 			return
 		}
 		if commonStreamId != streamId {
@@ -217,6 +213,7 @@ func (l *Live) getRoomInfoFromBody(body string) (info *live.Info, streamUrlInfos
 	return
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	l.isUsingLegacy = false
 	body, err := l.getLiveRoomWebPageResponse()
@@ -232,11 +229,12 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 		return
 	}
 
-	// fallback
+	// 回退到使用 legacy 函数
 	l.isUsingLegacy = true
 	return l.legacy_GetInfo(body)
 }
 
+// GetStreamUrls 获取直播流媒体URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	if !l.isUsingLegacy {
 		if l.LastAvailableStringUrlInfos != nil {
@@ -246,26 +244,29 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 			}
 			return
 		}
-		return nil, fmt.Errorf("failed douyin GetStreamUrls()")
+		return nil, fmt.Errorf("获取抖音直播流媒体URL失败")
 	} else {
 		return l.legacy_GetStreamUrls()
 	}
 }
 
+// GetPlatformCNName 获取直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }
 
 // ================ legacy functions ================
 
+// legacy_getRoomId 从网页响应体中解析房间ID
 func (l *Live) legacy_getRoomId(body string) (string, error) {
 	roomId := utils.Match1(roomIdCatcherRegex, body)
 	if roomId == "" {
-		return "", fmt.Errorf("failed to get RoomId from page, %w", live.ErrInternalError)
+		return "", fmt.Errorf("无法从页面获取房间ID，%w", live.ErrInternalError)
 	}
 	return roomId, nil
 }
 
+// legacy_GetStreamUrls 获取直播流媒体URL（旧版）
 func (l *Live) legacy_GetStreamUrls() (us []*url.URL, err error) {
 	var body string
 	body, err = l.getLiveRoomWebPageResponse()
@@ -292,6 +293,7 @@ func (l *Live) legacy_GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(urls...)
 }
 
+// legacy_getRoomInfo 从网页响应体中解析房间信息（旧版）
 func (l *Live) legacy_getRoomInfo(body string) (*gjson.Result, error) {
 	roomId, err := l.legacy_getRoomId(body)
 	if err != nil {
@@ -323,7 +325,7 @@ func (l *Live) legacy_getRoomInfo(body string) (*gjson.Result, error) {
 	case http.StatusNotFound:
 		return nil, live.ErrRoomNotExist
 	default:
-		return nil, fmt.Errorf("failed to get page, code: %v, %w", code, live.ErrInternalError)
+		return nil, fmt.Errorf("获取页面失败，状态码：%v，%w", code, live.ErrInternalError)
 	}
 
 	body, err = resp.Text()
@@ -334,6 +336,7 @@ func (l *Live) legacy_getRoomInfo(body string) (*gjson.Result, error) {
 	return &result, nil
 }
 
+// legacy_GetInfo 获取直播信息（旧版）
 func (l *Live) legacy_GetInfo(body string) (info *live.Info, err error) {
 	data, err := l.legacy_getRoomInfo(body)
 	if err != nil {

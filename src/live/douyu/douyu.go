@@ -1,6 +1,8 @@
+// 包 douyu 包含了与斗鱼直播平台相关的代码。
 package douyu
 
 import (
+	// 导入所需的包和库
 	"bytes"
 	"errors"
 	"fmt"
@@ -11,7 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hr3lxphr6j/requests"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -22,11 +24,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-/*
-From https://github.com/zhangn1985/ykdl
-
-Thanks
-*/
+// 常量定义
 const (
 	domain = "www.douyu.com"
 	cnName = "斗鱼"
@@ -36,65 +34,78 @@ const (
 	liveAPIUrl  = "https://www.douyu.com/lapi/live/getH5Play"
 )
 
+// 初始化函数，注册斗鱼直播平台
 func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder 结构体用于构建斗鱼直播实例
 type builder struct{}
 
+// Build 方法用于创建斗鱼直播实例
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	return &Live{
 		BaseLive: internal.NewBaseLive(url, opt...),
 	}, nil
 }
 
-var (
-	cryptoJS        []byte
-	douyuRoomIDRegs = []string{
-		`\$ROOM\.room_id\s*=\s*(\d+)`,
-		`room_id\s*=\s*(\d+)`,
-		`"room_id.?":(\d+)`,
-		`data-onlineid=(\d+)`,
-	}
-	workflowReg = `function ub98484234\(.+?\Weval\((\w+)\);`
-	jsDomTmpl   = template.Must(template.New("jsDom").Parse(`
-		{{.DebugMessages}} = { {{.DecryptedCodes}}: []};
-		if (!this.window) {window = {};}
-		if (!this.document) {document = {};}
-	`))
-	jsPatchTmpl = template.Must(template.New("jsPatch").Parse(`
-		{{.DebugMessages}}.{{.DecryptedCodes}}.push({{.Workflow}});
-		var patchCode = function(workflow) {
-			var testVari = /(\w+)=(\w+)\([\w\+]+\);.*?(\w+)="\w+";/.exec(workflow);
-			if (testVari && testVari[1] == testVari[2]) {
-				{{.Workflow}} += testVari[1] + "[" + testVari[3] + "] = function() {return true;};";
-			}
-		};
-		patchCode({{.Workflow}});
-		var subWorkflow = /(?:\w+=)?eval\((\w+)\)/.exec({{.Workflow}});
-		if (subWorkflow) {
-			var subPatch = (
-				"{{.DebugMessages}}.{{.DecryptedCodes}}.push('sub workflow: ' + subWorkflow);" +
-				"patchCode(subWorkflow);"
-			).replace(/subWorkflow/g, subWorkflow[1]) + subWorkflow[0];
-			{{.Workflow}} = {{.Workflow}}.replace(subWorkflow[0], subPatch);
-		}
-		eval({{.Workflow}});
-	`))
-	jsDebugTmpl = template.Must(template.New("jsDebug").Parse(`
-		var {{.Ub98484234}} = ub98484234;
-		ub98484234 = function(p1, p2, p3) {
-			try {
-				var resoult = {{.Ub98484234}}(p1, p2, p3);
-				{{.DebugMessages}}.{{.Resoult}} = resoult;
-			} catch(e) {
-				{{.DebugMessages}}.{{.Resoult}} = e.message;
-			}
-			return {{.DebugMessages}};
-		};
-	`))
-)
+// cryptoJS 全局变量用于存储 CryptoJS 库的 JavaScript 代码
+var cryptoJS []byte
 
+// douyuRoomIDRegs 数组包含了不同的正则表达式，用于从页面中提取斗鱼房间ID
+var douyuRoomIDRegs = []string{
+	`\$ROOM\.room_id\s*=\s*(\d+)`,
+	`room_id\s*=\s*(\d+)`,
+	`"room_id.?":(\d+)`,
+	`data-onlineid=(\d+)`,
+}
+
+// workflowReg 正则表达式用于匹配 JavaScript 中的工作流代码
+var workflowReg = `function ub98484234\(.+?\Weval\((\w+)\);`
+
+// jsDomTmpl 模板用于构建 JavaScript DOM 代码
+var jsDomTmpl = template.Must(template.New("jsDom").Parse(`
+	{{.DebugMessages}} = { {{.DecryptedCodes}}: []};
+	if (!this.window) {window = {};}
+	if (!this.document) {document = {};}
+`))
+
+// jsPatchTmpl 模板用于构建 JavaScript 补丁代码
+var jsPatchTmpl = template.Must(template.New("jsPatch").Parse(`
+	{{.DebugMessages}}.{{.DecryptedCodes}}.push({{.Workflow}});
+	var patchCode = function(workflow) {
+		var testVari = /(\w+)=(\w+)\([\w\+]+\);.*?(\w+)="\w+";/.exec(workflow);
+		if (testVari && testVari[1] == testVari[2]) {
+			{{.Workflow}} += testVari[1] + "[" + testVari[3] + "] = function() {return true;};";
+		}
+	};
+	patchCode({{.Workflow}});
+	var subWorkflow = /(?:\w+=)?eval\((\w+)\)/.exec({{.Workflow}});
+	if (subWorkflow) {
+		var subPatch = (
+			"{{.DebugMessages}}.{{.DecryptedCodes}}.push('sub workflow: ' + subWorkflow);" +
+			"patchCode(subWorkflow);"
+		).replace(/subWorkflow/g, subWorkflow[1]) + subWorkflow[0];
+		{{.Workflow}} = {{.Workflow}}.replace(subWorkflow[0], subPatch);
+	}
+	eval({{.Workflow}});
+`))
+
+// jsDebugTmpl 模板用于构建 JavaScript 调试代码
+var jsDebugTmpl = template.Must(template.New("jsDebug").Parse(`
+	var {{.Ub98484234}} = ub98484234;
+	ub98484234 = function(p1, p2, p3) {
+		try {
+			var resoult = {{.Ub98484234}}(p1, p2, p3);
+			{{.DebugMessages}}.{{.Resoult}} = resoult;
+		} catch(e) {
+			{{.DebugMessages}}.{{.Resoult}} = e.message;
+		}
+		return {{.DebugMessages}};
+	};
+`))
+
+// render 函数用于渲染模板
 func render(tmpl *template.Template, data interface{}) (string, error) {
 	buf := bytes.NewBuffer(nil)
 	if err := tmpl.Execute(buf, data); err != nil {
@@ -103,12 +114,14 @@ func render(tmpl *template.Template, data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
+// loadCryptoJS 函数用于加载 CryptoJS 库
 func loadCryptoJS() {
 	var (
 		resp *requests.Response
 		body []byte
 		err  error
 	)
+	// 尝试从多个CDN地址加载 CryptoJS 库
 	cdnUrls := [...]string{"https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js",
 		"https://cdn.jsdelivr.net/npm/crypto-js@3.1.9-1/crypto-js.min.js",
 		"https://cdn.staticfile.org/crypto-js/3.1.9-1/crypto-js.min.js",
@@ -129,6 +142,7 @@ func loadCryptoJS() {
 	panic(fmt.Errorf("failed to load CryptoJS, please check network"))
 }
 
+// getEngineWithCryptoJS 函数获取带有 CryptoJS 库的 JavaScript 引擎
 func getEngineWithCryptoJS() (*otto.Otto, error) {
 	if cryptoJS == nil {
 		loadCryptoJS()
@@ -140,11 +154,13 @@ func getEngineWithCryptoJS() (*otto.Otto, error) {
 	return engine, nil
 }
 
+// Live 结构体表示一个斗鱼直播实例
 type Live struct {
 	internal.BaseLive
 	roomID string
 }
 
+// fetchRoomID 方法从斗鱼直播页面中提取房间ID
 func (l *Live) fetchRoomID() error {
 	if l.roomID != "" {
 		return nil
@@ -161,6 +177,7 @@ func (l *Live) fetchRoomID() error {
 	if err != nil {
 		return errors.New("failed to read response body. error: " + err.Error())
 	}
+	// 使用正则表达式从页面中提取房间ID
 	for _, reg := range douyuRoomIDRegs {
 		if str := utils.Match1(reg, string(body)); str != "" {
 			l.roomID = str
@@ -187,10 +204,11 @@ func (l *Live) fetchRoomID() error {
 	return errors.New(errorMessage)
 }
 
+// GetInfo 方法获取斗鱼直播房间的信息，包括主播名称、房间名称和直播状态
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	if err := l.fetchRoomID(); err != nil {
 		if err.Error() == "房间未开放" {
-			return nil, errors.New("room not exists, fetchRoomID failed.")
+			return nil, errors.New("room not exists, fetchRoomID failed")
 		} else if err.Error() == "房间被关闭" {
 			return &live.Info{
 				Live:     l,
@@ -201,14 +219,13 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 		} else {
 			return nil, err
 		}
-
 	}
 	resp, err := requests.Get(fmt.Sprintf("%s/%s", liveInfoUrl, l.roomID), live.CommonUserAgent)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("GetInfo() failed, response code: %d", resp.StatusCode))
+		return nil, fmt.Errorf("GetInfo() failed, response code: %d", resp.StatusCode)
 	}
 	body, err := resp.Bytes()
 	if err != nil {
@@ -224,13 +241,14 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// getSignParams 方法获取签名参数，用于后续获取直播流媒体URL
 func (l *Live) getSignParams() (map[string]string, error) {
 	resp, err := requests.Get(liveEncUrl, live.CommonUserAgent, requests.Query("rids", l.roomID))
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("getSignParams() failed, response code: %d", resp.StatusCode))
+		return nil, fmt.Errorf("getSignParams() failed, response code: %d", resp.StatusCode)
 	}
 	body, err := resp.Bytes()
 	if err != nil {
@@ -307,6 +325,7 @@ func (l *Live) getSignParams() (map[string]string, error) {
 	return values, nil
 }
 
+// GetStreamUrls 方法获取直播流媒体的URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	if err := l.fetchRoomID(); err != nil {
 		return nil, err
@@ -333,7 +352,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 		return nil, err
 	}
 	if errorInt := gjson.GetBytes(body, "error").Int(); errorInt != 0 {
-		return nil, errors.New(fmt.Sprintf("GetStreamUrls() failed, error: %d", errorInt))
+		return nil, fmt.Errorf("GetStreamUrls() failed, error: %d", errorInt)
 	}
 	return utils.GenUrls(
 		fmt.Sprintf("%s/%s",
@@ -343,6 +362,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	)
 }
 
+// GetPlatformCNName 方法获取斗鱼直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

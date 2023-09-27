@@ -31,10 +31,10 @@ const (
 )
 
 var (
-	flvSign = []byte{0x46, 0x4c, 0x56, 0x01} // flv version01
+	flvSign = []byte{0x46, 0x4c, 0x56, 0x01} // FLV版本01
 
-	ErrNotFlvStream = errors.New("not flv stream")
-	ErrUnknownTag   = errors.New("unknown tag")
+	ErrNotFlvStream = errors.New("非FLV流")
+	ErrUnknownTag   = errors.New("未知标签")
 )
 
 func init() {
@@ -73,8 +73,9 @@ type Parser struct {
 	closeOnce *sync.Once
 }
 
+// ParseLiveStream 解析直播流
 func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Live, file string) error {
-	// init input
+	// 初始化输入流
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
 		return err
@@ -88,7 +89,7 @@ func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Li
 	p.i = reader.New(resp.Body)
 	defer p.i.Free()
 
-	// init output
+	// 初始化输出流
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
@@ -96,10 +97,11 @@ func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Li
 	p.o = f
 	defer f.Close()
 
-	// start parse
+	// 开始解析
 	return p.doParse(ctx)
 }
 
+// Stop 停止解析
 func (p *Parser) Stop() error {
 	p.closeOnce.Do(func() {
 		close(p.stopCh)
@@ -107,31 +109,33 @@ func (p *Parser) Stop() error {
 	return nil
 }
 
+// doParse 执行解析
 func (p *Parser) doParse(ctx context.Context) error {
-	// header of flv
+	// 解析FLV文件头
 	b, err := p.i.ReadN(9)
 	if err != nil {
 		return err
 	}
-	// signature
+	// 验证FLV文件头
 	if !bytes.Equal(b[:4], flvSign) {
 		return ErrNotFlvStream
 	}
-	// flag
+	// 设置视频和音频标志位
 	p.Metadata.HasVideo = uint8(b[4])&(1<<2) != 0
 	p.Metadata.HasAudio = uint8(b[4])&1 != 0
 
-	// offset must be 9
+	// 验证文件头偏移量必须为9
 	if binary.BigEndian.Uint32(b[5:]) != 9 {
 		return ErrNotFlvStream
 	}
 
-	// write flv header
+	// 写入FLV文件头
 	if err := p.doWrite(ctx, p.i.AllBytes()); err != nil {
 		return err
 	}
 	p.i.Reset()
 
+	// 开始解析标签
 	for {
 		select {
 		case <-p.stopCh:
@@ -144,17 +148,19 @@ func (p *Parser) doParse(ctx context.Context) error {
 	}
 }
 
+// doCopy 复制数据
 func (p *Parser) doCopy(ctx context.Context, n uint32) error {
 	if writtenCount, err := io.CopyN(p.o, p.i, int64(n)); err != nil || writtenCount != int64(writtenCount) {
 		utils.PrintStack(ctx)
 		if err == nil {
-			err = fmt.Errorf("doCopy(%d), %d bytes written", n, writtenCount)
+			err = fmt.Errorf("doCopy(%d), %d 字节已写入", n, writtenCount)
 		}
 		return err
 	}
 	return nil
 }
 
+// doWrite 写入数据
 func (p *Parser) doWrite(ctx context.Context, b []byte) error {
 	inst := instance.GetInstance(ctx)
 	logger := inst.Logger
@@ -167,11 +173,11 @@ func (p *Parser) doWrite(ctx context.Context, b []byte) error {
 			return err
 		}
 		if leftInputSize != 0 {
-			logger.Debugf("doWrite() left %d bytes to write", leftInputSize)
+			logger.Debugf("doWrite() 剩余 %d 字节待写入", leftInputSize)
 		}
 	}
 	if leftInputSize != 0 {
-		return fmt.Errorf("doWrite([%d]byte) tried %d times, but still has %d bytes to write", len(b), ioRetryCount, leftInputSize)
+		return fmt.Errorf("doWrite([%d]byte) 尝试了 %d 次，仍然有 %d 字节待写入", len(b), ioRetryCount, leftInputSize)
 	}
 	return nil
 }

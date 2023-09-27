@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"

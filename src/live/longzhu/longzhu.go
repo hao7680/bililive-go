@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -40,6 +40,7 @@ type Live struct {
 	realId string
 }
 
+// parseRealId 解析直播的真实 ID
 func (l *Live) parseRealId() error {
 	paths := strings.Split(l.Url.Path, "/")
 	if len(paths) < 2 {
@@ -62,6 +63,7 @@ func (l *Live) parseRealId() error {
 	return nil
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	if l.realId == "" {
 		if err := l.parseRealId(); err != nil {
@@ -99,9 +101,9 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 		Status:   gjson.GetBytes(body, "Broadcast.LiveType").Int() > 0,
 	}
 	return info, nil
-
 }
 
+// GetStreamUrls 获取直播流 URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	if l.realId == "" {
 		if err := l.parseRealId(); err != nil {
@@ -124,6 +126,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(urls...)
 }
 
+// GetPlatformCNName 获取平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

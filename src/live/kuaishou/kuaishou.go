@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -36,12 +36,15 @@ type Live struct {
 	internal.BaseLive
 }
 
+// getData 从页面获取数据
 func (l *Live) getData() (*gjson.Result, error) {
+	// 从选项中获取 Cookies
 	cookies := l.Options.Cookies.Cookies(l.Url)
 	cookieKVs := make(map[string]string)
 	for _, item := range cookies {
 		cookieKVs[item.Name] = item.Value
 	}
+	// 发送 GET 请求获取页面内容
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent, requests.Cookies(cookieKVs))
 	if err != nil {
 		return nil, err
@@ -54,22 +57,27 @@ func (l *Live) getData() (*gjson.Result, error) {
 		return nil, fmt.Errorf("failed to get page, code: %v, %w", code, live.ErrInternalError)
 	}
 
+	// 解析页面内容
 	body, err := resp.Text()
 	if err != nil {
 		return nil, err
 	}
+	// 从页面正文中提取渲染数据
 	rawData := utils.Match1(regRenderData, body)
 	if rawData == "" {
 		return nil, fmt.Errorf("failed to get RENDER_DATA from page, %w", live.ErrInternalError)
 	}
+	// 对渲染数据进行 URL 解码
 	unescapedRawData, err := url.QueryUnescape(rawData)
 	if err != nil {
 		return nil, err
 	}
+	// 解析 JSON 数据
 	result := gjson.Parse(unescapedRawData)
 	return &result, nil
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	data, err := l.getData()
 	if err != nil {
@@ -84,6 +92,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return
 }
 
+// GetStreamUrls 获取直播流 URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	data, err := l.getData()
 	if err != nil {
@@ -111,6 +120,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(urls...)
 }
 
+// GetPlatformCNName 获取平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

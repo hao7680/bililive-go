@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -38,6 +38,7 @@ type Live struct {
 	internal.BaseLive
 }
 
+// getData 获取CC直播数据
 func (l *Live) getData() (*gjson.Result, error) {
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent)
 	if err != nil {
@@ -52,12 +53,13 @@ func (l *Live) getData() (*gjson.Result, error) {
 	}
 	data := utils.UnescapeHTMLEntity(utils.Match1(dataRe, string(body)))
 	if data == "" {
-		return nil, errors.New("data is empty")
+		return nil, errors.New("数据为空")
 	}
 	result := gjson.Parse(data)
 	return &result, nil
 }
 
+// getCcID 获取CC直播的ccid
 func (l *Live) getCcID() (string, error) {
 	data, err := l.getData()
 	if err != nil {
@@ -66,6 +68,7 @@ func (l *Live) getCcID() (string, error) {
 	return data.Get("props.pageProps.roomInfoInitData.micfirst.ccid").String(), nil
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	data, err := l.getData()
 	if err != nil {
@@ -77,7 +80,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	)
 
 	if hostName == "" || roomName == "" {
-		return nil, errors.New("failed to parse host`s name and room`s name")
+		return nil, errors.New("解析主播姓名和房间名称失败")
 	}
 
 	info = &live.Info{
@@ -89,6 +92,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetStreamUrls 获取直播流媒体URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	ccid, err := l.getCcID()
 	if err != nil {
@@ -111,6 +115,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	)
 }
 
+// GetPlatformCNName 获取直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

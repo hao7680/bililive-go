@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hr3lxphr6j/requests"
 	uuid "github.com/satori/go.uuid"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -25,22 +25,27 @@ const (
 	cnName = "虎牙"
 )
 
+// init 函数用于在程序启动时注册虎牙直播平台的 builder
 func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder 结构体实现 live.Builder 接口，用于构建虎牙直播平台的直播实例
 type builder struct{}
 
+// Build 方法根据传入的 URL 构建虎牙直播实例
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	return &Live{
 		BaseLive: internal.NewBaseLive(url, opt...),
 	}, nil
 }
 
+// Live 结构体表示一个虎牙直播实例
 type Live struct {
 	internal.BaseLive
 }
 
+// GetInfo 方法获取虎牙直播房间的信息，包括主播名称、房间名称和直播状态
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent)
 	if err != nil {
@@ -87,11 +92,13 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetMD5Hash 方法计算字符串的 MD5 哈希值
 func GetMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
 }
 
+// parseAntiCode 方法解析反作弊参数并生成反作弊校验码
 func parseAntiCode(anticode string, uid int64, streamName string) (string, error) {
 	qr, err := url.ParseQuery(anticode)
 	if err != nil {
@@ -116,6 +123,7 @@ func parseAntiCode(anticode string, uid int64, streamName string) (string, error
 	return qr.Encode(), nil
 }
 
+// GetStreamUrls 方法获取虎牙直播房间的流媒体 URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent)
 	if err != nil {
@@ -136,8 +144,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 		sStreamName  = utils.Match1(`"sStreamName":"([^"]*)"`, streamStr)
 		sFlvUrl      = strings.ReplaceAll(utils.Match1(`"sFlvUrl":"([^"]*)"`, streamStr), `\/`, `/`)
 		sFlvAntiCode = utils.Match1(`"sFlvAntiCode":"([^"]*)"`, streamStr)
-		// iLineIndex   = utils.Match1(`"iLineIndex":(\d*),`, streamStr)
-		uid = (time.Now().Unix()%1e7*1e6 + int64(1e3*rand.Float64())) % 4294967295
+		uid          = (time.Now().Unix()%1e7*1e6 + int64(1e3*rand.Float64())) % 4294967295
 	)
 	query, err := parseAntiCode(sFlvAntiCode, uid, sStreamName)
 	if err != nil {
@@ -157,6 +164,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return []*url.URL{u}, nil
 }
 
+// GetPlatformCNName 方法获取虎牙直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

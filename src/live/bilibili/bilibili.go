@@ -6,14 +6,15 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
 	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
 )
 
+// 常量定义
 const (
 	domain = "live.bilibili.com"
 	cnName = "哔哩哔哩"
@@ -24,10 +25,12 @@ const (
 	liveApiUrlv2 = "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo"
 )
 
+// 初始化函数，注册 Bilibili 直播源
 func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder 结构体，用于创建 Bilibili 直播源
 type builder struct{}
 
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
@@ -36,11 +39,13 @@ func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	}, nil
 }
 
+// Live 结构体，表示 Bilibili 直播源
 type Live struct {
 	internal.BaseLive
 	realID string
 }
 
+// parseRealId 从 URL 解析出真实房间ID
 func (l *Live) parseRealId() error {
 	paths := strings.Split(l.Url.Path, "/")
 	if len(paths) < 2 {
@@ -66,8 +71,9 @@ func (l *Live) parseRealId() error {
 	return nil
 }
 
+// GetInfo 获取直播房间信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
-	// Parse the short id from URL to full id
+	// 从 URL 解析出真实房间ID
 	if l.realID == "" {
 		if err := l.parseRealId(); err != nil {
 			return nil, err
@@ -124,6 +130,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetStreamUrls 获取直播流媒体地址列表
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	if l.realID == "" {
 		if err := l.parseRealId(); err != nil {
@@ -169,6 +176,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(urls...)
 }
 
+// GetPlatformCNName 获取平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

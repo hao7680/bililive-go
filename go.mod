@@ -8,7 +8,6 @@ require (
 	github.com/bluele/gcache v0.0.2
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/mux v1.7.4
-	github.com/hr3lxphr6j/requests v0.0.1
 	github.com/lthibault/jitterbug v2.0.0+incompatible
 	github.com/prometheus/client_golang v1.11.0
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff
@@ -16,6 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.9.3
+	github.com/yuhaohwang/requests v0.0.1
 	gopkg.in/yaml.v2 v2.3.0
 )
 
@@ -31,7 +31,6 @@ require (
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect

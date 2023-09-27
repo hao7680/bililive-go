@@ -20,13 +20,13 @@ const (
 )
 
 func (p *Parser) parseScriptTag(ctx context.Context, length uint32) error {
-	// TODO: parse script tag content
-	// write tag header
+	// TODO: 解析脚本标签内容
+	// 写入标签头
 	if err := p.doWrite(ctx, p.i.AllBytes()); err != nil {
 		return err
 	}
 	p.i.Reset()
-	// write body
+	// 写入内容
 	if err := p.doCopy(ctx, length); err != nil {
 		return err
 	}

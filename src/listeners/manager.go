@@ -1,3 +1,4 @@
+// Package listeners 包含管理直播监听器的相关代码。
 package listeners
 
 import (
@@ -13,6 +14,7 @@ import (
 // for test
 var newListener = NewListener
 
+// NewManager 创建一个新的监听器管理器。
 func NewManager(ctx context.Context) Manager {
 	lm := &manager{
 		savers: make(map[live.ID]Listener),
@@ -21,6 +23,7 @@ func NewManager(ctx context.Context) Manager {
 	return lm
 }
 
+// Manager 定义了监听器管理器的接口，它实现了 interfaces.Module 接口。
 type Manager interface {
 	interfaces.Module
 	AddListener(ctx context.Context, live live.Live) error
@@ -29,11 +32,13 @@ type Manager interface {
 	HasListener(ctx context.Context, liveId live.ID) bool
 }
 
+// manager 实现了监听器管理器的接口。
 type manager struct {
 	lock   sync.RWMutex
 	savers map[live.ID]Listener
 }
 
+// registryListener 注册监听器，用于监听直播房间初始化完成事件。
 func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 	ed.AddEventListener(RoomInitializingFinished, events.NewEventListener(func(event *events.Event) {
 		param := event.Object.(live.InitializingFinishedParam)
@@ -65,6 +70,7 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 	}))
 }
 
+// Start 启动监听器管理器。
 func (m *manager) Start(ctx context.Context) error {
 	inst := instance.GetInstance(ctx)
 	if inst.Config.RPC.Enable || len(inst.Lives) > 0 {
@@ -74,6 +80,7 @@ func (m *manager) Start(ctx context.Context) error {
 	return nil
 }
 
+// Close 关闭监听器管理器。
 func (m *manager) Close(ctx context.Context) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -85,6 +92,7 @@ func (m *manager) Close(ctx context.Context) {
 	inst.WaitGroup.Done()
 }
 
+// AddListener 添加一个监听器到管理器。
 func (m *manager) AddListener(ctx context.Context, live live.Live) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -97,6 +105,7 @@ func (m *manager) AddListener(ctx context.Context, live live.Live) error {
 	return listener.Start()
 }
 
+// RemoveListener 从管理器中移除指定的监听器。
 func (m *manager) RemoveListener(ctx context.Context, liveId live.ID) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -109,6 +118,7 @@ func (m *manager) RemoveListener(ctx context.Context, liveId live.ID) error {
 	return nil
 }
 
+// replaceListener 替换监听器。
 func (m *manager) replaceListener(ctx context.Context, oldLive live.Live, newLive live.Live) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -128,6 +138,7 @@ func (m *manager) replaceListener(ctx context.Context, oldLive live.Live, newLiv
 	return newListener.Start()
 }
 
+// GetListener 获取指定的监听器。
 func (m *manager) GetListener(ctx context.Context, liveId live.ID) (Listener, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -138,6 +149,7 @@ func (m *manager) GetListener(ctx context.Context, liveId live.ID) (Listener, er
 	return listener, nil
 }
 
+// HasListener 检查是否存在指定的监听器。
 func (m *manager) HasListener(ctx context.Context, liveId live.ID) bool {
 	m.lock.RLock()
 	defer m.lock.RUnlock()

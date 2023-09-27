@@ -56,6 +56,7 @@ type Parser struct {
 	statusResp chan map[string]string
 }
 
+// scanFFmpegStatus 扫描FFmpeg的状态输出
 func (p *Parser) scanFFmpegStatus() <-chan []byte {
 	ch := make(chan []byte)
 	br := bufio.NewScanner(p.cmdStdout)
@@ -79,6 +80,7 @@ func (p *Parser) scanFFmpegStatus() <-chan []byte {
 	return ch
 }
 
+// decodeFFmpegStatus 解码FFmpeg的状态信息
 func (p *Parser) decodeFFmpegStatus(b []byte) (status map[string]string) {
 	status = map[string]string{
 		"parser": Name,
@@ -95,6 +97,7 @@ func (p *Parser) decodeFFmpegStatus(b []byte) (status map[string]string) {
 	return
 }
 
+// scheduler 启动调度程序来定期获取FFmpeg状态
 func (p *Parser) scheduler() {
 	defer close(p.statusResp)
 	statusCh := p.scanFFmpegStatus()
@@ -118,12 +121,14 @@ func (p *Parser) scheduler() {
 	}
 }
 
+// Status 获取FFmpeg的状态信息
 func (p *Parser) Status() (map[string]string, error) {
-	// TODO: check parser is running
+	// TODO: 检查解析器是否正在运行
 	p.statusReq <- struct{}{}
 	return <-p.statusResp, nil
 }
 
+// ParseLiveStream 解析直播流
 func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Live, file string) (err error) {
 	ffmpegPath, err := utils.GetFFmpegPath(ctx)
 	if err != nil {
@@ -144,7 +149,7 @@ func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Li
 	inst := instance.GetInstance(ctx)
 	MaxFileSize := inst.Config.VideoSplitStrategies.MaxFileSize
 	if MaxFileSize < 0 {
-		inst.Logger.Infof("Invalid MaxFileSize: %d", MaxFileSize)
+		inst.Logger.Infof("无效的MaxFileSize：%d", MaxFileSize)
 	} else if MaxFileSize > 0 {
 		args = append(args, "-fs", strconv.Itoa(MaxFileSize))
 	}
@@ -168,6 +173,7 @@ func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Li
 	return p.cmd.Wait()
 }
 
+// Stop 停止解析器
 func (p *Parser) Stop() error {
 	p.closeOnce.Do(func() {
 		if p.cmd.ProcessState == nil {

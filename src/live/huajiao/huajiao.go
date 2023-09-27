@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -21,23 +21,28 @@ const (
 	apiStream    = "https://live.huajiao.com/live/substream"
 )
 
+// init 函数用于在程序启动时注册花椒直播平台的 builder
 func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder 结构体实现 live.Builder 接口，用于构建花椒直播平台的直播实例
 type builder struct{}
 
+// Build 方法根据传入的 URL 构建花椒直播实例
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	return &Live{
 		BaseLive: internal.NewBaseLive(url, opt...),
 	}, nil
 }
 
+// Live 结构体表示一个花椒直播实例
 type Live struct {
 	uid string
 	internal.BaseLive
 }
 
+// getUid 方法获取花椒直播用户的 UID
 func (l *Live) getUid() (string, error) {
 	if l.uid != "" {
 		return l.uid, nil
@@ -72,6 +77,7 @@ func (l *Live) getUid() (string, error) {
 	}
 }
 
+// getNickname 方法根据 UID 获取花椒直播用户的昵称
 func (l *Live) getNickname(uid string) (string, error) {
 	resp, err := requests.Get(apiUserInfo, live.CommonUserAgent, requests.Query("fmt", "json"), requests.Query("uid", uid))
 	if err != nil {
@@ -90,6 +96,7 @@ func (l *Live) getNickname(uid string) (string, error) {
 	return gjson.GetBytes(body, "data.nickname").String(), nil
 }
 
+// getLiveFeeds 方法根据 UID 获取花椒直播用户的直播信息
 func (l *Live) getLiveFeeds(uid string) ([]gjson.Result, error) {
 	resp, err := requests.Get(apiUserFeeds, live.CommonUserAgent, requests.Query("fmt", "json"), requests.Query("uid", uid))
 	if err != nil {
@@ -102,6 +109,7 @@ func (l *Live) getLiveFeeds(uid string) ([]gjson.Result, error) {
 	return gjson.GetBytes(feedsData, "data.feeds.#(type==1)#").Array(), nil
 }
 
+// GetInfo 方法获取花椒直播房间的信息，包括主播名称、房间名称和直播状态
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	uid, err := l.getUid()
 	if err != nil {
@@ -134,6 +142,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetStreamUrls 方法获取花椒直播房间的流媒体 URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	uid, err := l.getUid()
 	if err != nil {
@@ -170,6 +179,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(gjson.GetBytes(body, "data.main").String())
 }
 
+// GetPlatformCNName 方法获取花椒直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

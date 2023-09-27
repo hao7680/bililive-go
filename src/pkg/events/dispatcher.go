@@ -1,4 +1,3 @@
-//go:generate mockgen -package mock -destination mock/mock.go github.com/yuhaohwang/bililive-go/src/pkg/events Dispatcher
 package events
 
 import (
@@ -10,6 +9,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/interfaces"
 )
 
+// NewDispatcher 创建一个新的事件分发器并返回。
 func NewDispatcher(ctx context.Context) Dispatcher {
 	ed := &dispatcher{
 		saver: make(map[EventType]*list.List),
@@ -21,6 +21,7 @@ func NewDispatcher(ctx context.Context) Dispatcher {
 	return ed
 }
 
+// Dispatcher 定义事件分发器的接口。
 type Dispatcher interface {
 	interfaces.Module
 	AddEventListener(eventType EventType, listener *EventListener)
@@ -29,19 +30,23 @@ type Dispatcher interface {
 	DispatchEvent(event *Event)
 }
 
+// dispatcher 表示事件分发器的结构。
 type dispatcher struct {
 	sync.RWMutex
 	saver map[EventType]*list.List // map<EventType, List<*EventListener>>
 }
 
+// Start 实现了接口中的 Start 方法。
 func (e *dispatcher) Start(ctx context.Context) error {
 	return nil
 }
 
+// Close 实现了接口中的 Close 方法。
 func (e *dispatcher) Close(ctx context.Context) {
 
 }
 
+// AddEventListener 添加事件监听器。
 func (e *dispatcher) AddEventListener(eventType EventType, listener *EventListener) {
 	e.Lock()
 	defer e.Unlock()
@@ -53,6 +58,7 @@ func (e *dispatcher) AddEventListener(eventType EventType, listener *EventListen
 	listeners.PushBack(listener)
 }
 
+// RemoveEventListener 移除事件监听器。
 func (e *dispatcher) RemoveEventListener(eventType EventType, listener *EventListener) {
 	e.Lock()
 	defer e.Unlock()
@@ -70,12 +76,14 @@ func (e *dispatcher) RemoveEventListener(eventType EventType, listener *EventLis
 	}
 }
 
+// RemoveAllEventListener 移除指定事件类型的所有监听器。
 func (e *dispatcher) RemoveAllEventListener(eventType EventType) {
 	e.Lock()
 	defer e.Unlock()
 	e.saver = make(map[EventType]*list.List)
 }
 
+// DispatchEvent 分发事件。
 func (e *dispatcher) DispatchEvent(event *Event) {
 	if event == nil {
 		return

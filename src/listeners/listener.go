@@ -1,4 +1,6 @@
 //go:generate mockgen -package listeners -destination mock_test.go github.com/yuhaohwang/bililive-go/src/listeners Listener,Manager
+
+// Package listeners 包含监听器相关的代码。
 package listeners
 
 import (
@@ -16,6 +18,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/pkg/events"
 )
 
+// 定义状态常量用于标记监听器的状态。
 const (
 	begin uint32 = iota
 	pending
@@ -23,11 +26,13 @@ const (
 	stopped
 )
 
+// Listener 定义了监听器接口，用于启动和关闭监听器。
 type Listener interface {
 	Start() error
 	Close()
 }
 
+// NewListener 创建一个新的监听器实例。
 func NewListener(ctx context.Context, live live.Live) Listener {
 	inst := instance.GetInstance(ctx)
 	return &listener{
@@ -41,6 +46,7 @@ func NewListener(ctx context.Context, live live.Live) Listener {
 	}
 }
 
+// listener 实现了 Listener 接口。
 type listener struct {
 	Live   live.Live
 	status status
@@ -53,6 +59,7 @@ type listener struct {
 	stop  chan struct{}
 }
 
+// Start 启动监听器。
 func (l *listener) Start() error {
 	if !atomic.CompareAndSwapUint32(&l.state, begin, pending) {
 		return nil
@@ -65,6 +72,7 @@ func (l *listener) Start() error {
 	return nil
 }
 
+// Close 关闭监听器。
 func (l *listener) Close() {
 	if !atomic.CompareAndSwapUint32(&l.state, running, stopped) {
 		return
@@ -73,6 +81,7 @@ func (l *listener) Close() {
 	close(l.stop)
 }
 
+// refresh 刷新监听器状态。
 func (l *listener) refresh() {
 	info, err := l.Live.GetInfo()
 	if err != nil {
@@ -129,6 +138,7 @@ func (l *listener) refresh() {
 	}
 }
 
+// run 启动监听器的主循环。
 func (l *listener) run() {
 	ticker := jitterbug.New(
 		time.Duration(l.config.Interval)*time.Second,

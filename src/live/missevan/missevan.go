@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -36,6 +36,7 @@ type Live struct {
 	internal.BaseLive
 }
 
+// getRoomId 获取房间 ID
 func (l *Live) getRoomId() (string, error) {
 	paths := strings.Split(l.Url.Path, "/")
 	if len(paths) < 2 {
@@ -46,6 +47,7 @@ func (l *Live) getRoomId() (string, error) {
 	return roomid, nil
 }
 
+// getRoomInfo 获取房间信息
 func (l *Live) getRoomInfo() ([]byte, error) {
 	roomid, err := l.getRoomId()
 	if err != nil {
@@ -65,6 +67,7 @@ func (l *Live) getRoomInfo() ([]byte, error) {
 	return body, nil
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	body, err := l.getRoomInfo()
 	if err != nil {
@@ -81,6 +84,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetStreamUrls 获取直播流 URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	body, err := l.getRoomInfo()
 	if err != nil {
@@ -89,6 +93,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(gjson.GetBytes(body, "info.room.channel.flv_pull_url").String())
 }
 
+// GetPlatformCNName 获取平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

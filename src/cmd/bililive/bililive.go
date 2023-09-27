@@ -27,6 +27,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/servers"
 )
 
+// 获取配置信息
 func getConfig() (*configs.Config, error) {
 	var config *configs.Config
 	if *flag.Conf != "" {
@@ -39,7 +40,7 @@ func getConfig() (*configs.Config, error) {
 		config = flag.GenConfigFromFlags()
 	}
 	if !config.RPC.Enable && len(config.LiveRooms) == 0 {
-		// if config is invalid, try using the config.yml file besides the executable file.
+		// 如果配置无效，则尝试使用可执行文件旁边的config.yml文件。
 		config, err := getConfigBesidesExecutable()
 		if err == nil {
 			return config, config.Verify()
@@ -48,6 +49,7 @@ func getConfig() (*configs.Config, error) {
 	return config, config.Verify()
 }
 
+// 获取可执行文件旁边的配置信息
 func getConfigBesidesExecutable() (*configs.Config, error) {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -70,25 +72,25 @@ func main() {
 
 	inst := new(instance.Instance)
 	inst.Config = config
-	// TODO: Replace gcache with hashmap.
-	// LRU seems not necessary here.
+	// TODO: 用哈希表替换gcache。
+	// LRU似乎在这里不是必要的。
 	inst.Cache = gcache.New(1024).LRU().Build()
 	ctx := context.WithValue(context.Background(), instance.Key, inst)
 
 	logger := log.New(ctx)
-	logger.Infof("%s Version: %s Link Start", consts.AppName, consts.AppVersion)
+	logger.Infof("%s 版本: %s 启动链接", consts.AppName, consts.AppVersion)
 	if config.File != "" {
-		logger.Debugf("config path: %s.", config.File)
-		logger.Debugf("other flags have been ignored.")
+		logger.Debugf("配置路径: %s.", config.File)
+		logger.Debugf("其他标志已被忽略.")
 	} else {
-		logger.Debugf("config file is not used.")
-		logger.Debugf("flag: %s used.", os.Args)
+		logger.Debugf("未使用配置文件.")
+		logger.Debugf("标志: %s 被使用.", os.Args)
 	}
 	logger.Debugf("%+v", consts.AppInfo)
 	logger.Debugf("%+v", inst.Config)
 
 	if !utils.IsFFmpegExist(ctx) {
-		logger.Fatalln("FFmpeg binary not found, Please Check.")
+		logger.Fatalln("未找到FFmpeg二进制文件，请检查.")
 	}
 
 	events.NewDispatcher(ctx)
@@ -112,7 +114,7 @@ func main() {
 			continue
 		}
 		if _, ok := inst.Lives[l.GetLiveId()]; ok {
-			logger.Errorf("%s is exist!", room)
+			logger.Errorf("%s 已存在!", room)
 			continue
 		}
 		inst.Lives[l.GetLiveId()] = l
@@ -121,20 +123,20 @@ func main() {
 
 	if inst.Config.RPC.Enable {
 		if err := servers.NewServer(ctx).Start(ctx); err != nil {
-			logger.WithError(err).Fatalf("failed to init server")
+			logger.WithError(err).Fatalf("初始化服务器失败")
 		}
 	}
 	lm := listeners.NewManager(ctx)
 	rm := recorders.NewManager(ctx)
 	if err := lm.Start(ctx); err != nil {
-		logger.Fatalf("failed to init listener manager, error: %s", err)
+		logger.Fatalf("初始化监听器管理器失败，错误: %s", err)
 	}
 	if err := rm.Start(ctx); err != nil {
-		logger.Fatalf("failed to init recorder manager, error: %s", err)
+		logger.Fatalf("初始化录制器管理器失败，错误: %s", err)
 	}
 
 	if err = metrics.NewCollector(ctx).Start(ctx); err != nil {
-		logger.Fatalf("failed to init metrics collector, error: %s", err)
+		logger.Fatalf("初始化指标收集器失败，错误: %s", err)
 	}
 
 	for _, _live := range inst.Lives {
@@ -163,5 +165,5 @@ func main() {
 	}()
 
 	inst.WaitGroup.Wait()
-	logger.Info("Bye~")
+	logger.Info("再见~")
 }

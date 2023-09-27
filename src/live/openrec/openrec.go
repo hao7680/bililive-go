@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	domain = "www.openrec.tv"
-	cnName = "openrec"
+	domain = "www.openrec.tv" // 定义域名
+	cnName = "openrec"        // 定义平台中文名称
 )
 
+// Live 结构体表示 OpenRec 平台的直播信息。
 type Live struct {
 	internal.BaseLive
 }
@@ -25,14 +26,17 @@ func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder 结构体用于构建 OpenRec 平台的直播。
 type builder struct{}
 
+// Build 方法实现了构建 OpenRec 平台直播的逻辑。
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	return &Live{
 		BaseLive: internal.NewBaseLive(url, opt...),
 	}, nil
 }
 
+// GetInfo 方法用于获取 OpenRec 平台的直播信息。
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent)
 	if err != nil {
@@ -70,6 +74,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	return info, nil
 }
 
+// GetStreamUrls 方法用于获取 OpenRec 平台的直播流媒体 URL。
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	resp, err := requests.Get(l.Url.String(), live.CommonUserAgent)
 	if err != nil {
@@ -85,6 +90,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return utils.GenUrls(utils.Match1(`{"url":"(\S*m3u8)",`, body))
 }
 
+// GetPlatformCNName 方法返回 OpenRec 平台的中文名称。
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }

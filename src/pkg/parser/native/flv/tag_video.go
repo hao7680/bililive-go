@@ -19,29 +19,29 @@ type (
 )
 
 const (
-	// Frame Type
-	KeyFrame             FrameType = 1 // for AVC, a seekable frame
-	InterFrame           FrameType = 2 // for AVC, a non-seekable frame
-	DisposableInterFrame FrameType = 3 // H.263 only
-	GeneratedKeyFrame    FrameType = 4 // reserved for server use only
-	VideoInfoFrame       FrameType = 5 // video info/command frame
+	// 帧类型
+	KeyFrame             FrameType = 1 // AVC中的关键帧，可寻址帧
+	InterFrame           FrameType = 2 // AVC中的非关键帧，不可寻址帧
+	DisposableInterFrame FrameType = 3 // 仅用于H.263
+	GeneratedKeyFrame    FrameType = 4 // 仅服务器使用
+	VideoInfoFrame       FrameType = 5 // 视频信息/命令帧
 
-	// CodeID
+	// 编码标识
 	H263Code          CodeID = 2 // Sorenson H.263
-	ScreenVideoCode   CodeID = 3 // Screen video
+	ScreenVideoCode   CodeID = 3 // 屏幕视频
 	VP6Code           CodeID = 4 // On2 VP6
-	VP6AlphaCode      CodeID = 5 // On2 VP6 with alpha channel
-	ScreenVideoV2Code CodeID = 6 // Screen video version 2
+	VP6AlphaCode      CodeID = 5 // 带Alpha通道的On2 VP6
+	ScreenVideoV2Code CodeID = 6 // 屏幕视频版本2
 	AVCCode           CodeID = 7 // AVC
 
-	// AVCPacketType
-	AVCSeqHeader AVCPacketType = 0 // AVC sequence header
-	AVCNALU      AVCPacketType = 1 // NALU
-	AVCEndSeq    AVCPacketType = 2 // AVC end of sequence (lower level NALU sequence ender is not required or supported)
+	// AVC包类型
+	AVCSeqHeader AVCPacketType = 0 // AVC序列头
+	AVCNALU      AVCPacketType = 1 // NAL单元
+	AVCEndSeq    AVCPacketType = 2 // AVC序列结束（不需要或不支持较低级别的NALU序列结束）
 )
 
 func (p *Parser) parseVideoTag(ctx context.Context, length, timestamp uint32) (*VideoTagHeader, error) {
-	// header
+	// 解析标签头部
 	b, err := p.i.ReadByte()
 	l := length - 1
 	if err != nil {
@@ -52,7 +52,7 @@ func (p *Parser) parseVideoTag(ctx context.Context, length, timestamp uint32) (*
 	tag.CodeID = CodeID(b & 15)
 
 	if tag.CodeID == AVCCode {
-		// read AVCPacketType
+		// 读取AVCPacketType
 		b, err := p.i.ReadByte()
 		l -= 1
 		if err != nil {
@@ -61,7 +61,7 @@ func (p *Parser) parseVideoTag(ctx context.Context, length, timestamp uint32) (*
 		tag.AVCPacketType = AVCPacketType(b)
 		switch tag.AVCPacketType {
 		case AVCNALU:
-			// read CompositionTime
+			// 读取CompositionTime
 			b, err := p.i.ReadN(3)
 			l -= 3
 			if err != nil {
@@ -71,18 +71,18 @@ func (p *Parser) parseVideoTag(ctx context.Context, length, timestamp uint32) (*
 		case AVCSeqHeader:
 			p.avcHeaderCount++
 			if p.avcHeaderCount > 1 {
-				// new sps pps
-				return nil, errors.New("EOF new sps pps")
+				// 新的sps和pps
+				return nil, errors.New("EOF 新的sps和pps")
 			}
 		}
 	}
 
-	// write tag header && video tag header & AVCPacketType & CompositionTime
+	// 写入标签头、视频标签头、AVCPacketType和CompositionTime
 	if err := p.doWrite(ctx, p.i.AllBytes()); err != nil {
 		return nil, err
 	}
 	p.i.Reset()
-	// write body
+	// 写入内容
 	if err := p.doCopy(ctx, l); err != nil {
 		return nil, err
 	}

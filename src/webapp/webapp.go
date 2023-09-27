@@ -1,4 +1,6 @@
-//go:build release
+//go:build !dev
+
+// go:build release
 
 package webapp
 

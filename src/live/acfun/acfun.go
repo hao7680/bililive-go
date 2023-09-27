@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hr3lxphr6j/requests"
 	"github.com/tidwall/gjson"
+	"github.com/yuhaohwang/requests"
 
 	"github.com/yuhaohwang/bililive-go/src/live"
 	"github.com/yuhaohwang/bililive-go/src/live/internal"
@@ -23,10 +23,12 @@ const (
 	liveInfoApi = "https://api.kuaishouzt.com/rest/zt/live/web/startPlay"
 )
 
+// init函数用于注册AcFun直播平台的Live实现
 func init() {
 	live.Register(domain, new(builder))
 }
 
+// builder是用于创建AcFun Live实例的建造者
 type builder struct{}
 
 func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
@@ -35,10 +37,12 @@ func (b *builder) Build(url *url.URL, opt ...live.Option) (live.Live, error) {
 	}, nil
 }
 
+// Live是AcFun直播平台的Live实现
 type Live struct {
 	internal.BaseLive
 }
 
+// GetInfo 获取直播信息
 func (l *Live) GetInfo() (info *live.Info, err error) {
 	paths := strings.Split(l.Url.Path, "/")
 	if len(paths) < 2 {
@@ -64,6 +68,7 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	}, nil
 }
 
+// GetStreamUrls 获取直播流媒体URL
 func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	did := "web_" + utils.GenRandomName(16)
 	resp, err := requests.Post(
@@ -121,6 +126,7 @@ func (l *Live) GetStreamUrls() (us []*url.URL, err error) {
 	return rs.GenUrls()
 }
 
+// GetPlatformCNName 获取直播平台的中文名称
 func (l *Live) GetPlatformCNName() string {
 	return cnName
 }
