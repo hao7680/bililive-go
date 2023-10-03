@@ -289,8 +289,3 @@ func (c Config) GetFilePath() (string, error) {
 	}
 	return c.File, nil
 }
-
-// GetRtmpUrl 获取转推 URL
-func (l *LiveRoom) GetRtmpUrl() string {
-	return l.Rtmp
-}

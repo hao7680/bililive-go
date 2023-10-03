@@ -30,21 +30,21 @@ func parseInfo(ctx context.Context, l live.Live) *live.Info {
 	// 获取应用程序实例
 	inst := instance.GetInstance(ctx)
 
-	// 获取直播的原始 URL
-	live_url := l.GetRawUrl()
-
-	// 使用 URL 从配置中获取房间信息
-	room, _ := inst.Config.GetLiveRoomByUrl(live_url)
-
-	// 获取房间的推流地址（RTMP）
-	rtmp := room.GetRtmpUrl()
-
 	// 从缓存中获取直播信息对象
 	obj, _ := inst.Cache.Get(l)
 	info := obj.(*live.Info)
 
-	// 将推流地址赋给 info 结构的字段
-	info.RtmpUrl = rtmp
+	// 获取直播的原始 URL
+	live_url := l.GetRawUrl()
+
+	// 使用 URL 从配置中获取房间信息
+	room, err := inst.Config.GetLiveRoomByUrl(live_url)
+	if err == nil {
+		// 获取房间的推流地址（RTMP）
+		rtmp := room.Rtmp
+		// 将推流地址赋给 info 结构的字段
+		info.RtmpUrl = rtmp
+	}
 
 	// 检查是否有监听器和录制器，并将结果存储在相应的字段中
 	info.Listening = inst.ListenerManager.(listeners.Manager).HasListener(ctx, l.GetLiveId())
@@ -193,8 +193,10 @@ func addLives(writer http.ResponseWriter, r *http.Request) {
 	gjson.ParseBytes(b).ForEach(func(key, value gjson.Result) bool {
 		isListen := value.Get("listen").Bool()
 		urlStr := strings.Trim(value.Get("url").String(), " ")
+		isPush := value.Get("push").Bool()
+		rtmpStr := strings.Trim(value.Get("rtmp").String(), " ")
 		// 调用添加直播信息的实现函数
-		if retInfo, err := addLiveImpl(r.Context(), urlStr, isListen); err != nil {
+		if retInfo, err := addLiveImpl(r.Context(), urlStr, isListen, rtmpStr, isPush); err != nil {
 			msg := urlStr + "：" + err.Error()
 			inst.Logger.Error(msg)
 			errorMessages = append(errorMessages, msg)
@@ -211,7 +213,7 @@ func addLives(writer http.ResponseWriter, r *http.Request) {
 }
 
 // 添加直播信息的实现函数
-func addLiveImpl(ctx context.Context, urlStr string, isListen bool) (info *live.Info, err error) {
+func addLiveImpl(ctx context.Context, urlStr string, isListen bool, rtmpStr string, isPush bool) (info *live.Info, err error) {
 	// 如果 URL 不以 "http://" 或 "https://" 开头，则添加 "https://" 前缀
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
 		urlStr = "https://" + urlStr
@@ -221,6 +223,7 @@ func addLiveImpl(ctx context.Context, urlStr string, isListen bool) (info *live.
 	if err != nil {
 		return nil, errors.New("无法解析 URL：" + urlStr)
 	}
+
 	// 获取应用程序实例
 	inst := instance.GetInstance(ctx)
 	opts := make([]live.Option, 0)
@@ -241,10 +244,27 @@ func addLiveImpl(ctx context.Context, urlStr string, isListen bool) (info *live.
 		}
 		info = parseInfo(ctx, newLive)
 
+		// 如果rtmp不为空则添加相关字段
+		if rtmpStr != "" {
+			// 如果 RTMP 不以 "rtmp://" 或 "rtmps://" 开头，则添加 "rtmp://" 前缀
+			if !strings.HasPrefix(rtmpStr, "rtmp://") && !strings.HasPrefix(rtmpStr, "rtmps://") {
+				rtmpStr = "rtmp://" + rtmpStr
+			}
+			// 解析 RTMP
+			r, err := url.Parse(rtmpStr)
+			if err != nil {
+				return nil, errors.New("无法解析 RTMP：" + rtmpStr)
+			}
+			info.RtmpUrl = r.String()
+			info.IsPush = isPush
+		}
+
 		liveRoom := configs.LiveRoom{
 			Url:         u.String(),
 			IsListening: isListen,
 			LiveId:      newLive.GetLiveId(),
+			Rtmp:        rtmpStr,
+			IsPush:      isPush,
 		}
 		inst.Config.LiveRooms = append(inst.Config.LiveRooms, liveRoom)
 	}
@@ -402,7 +422,7 @@ func applyLiveRoomsByConfig(ctx context.Context, newLiveRooms []configs.LiveRoom
 		newUrlMap[newRoom.Url] = &newRoom
 		if room, err := currentConfig.GetLiveRoomByUrl(newRoom.Url); err != nil {
 			// 添加直播信息
-			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.IsListening); err != nil {
+			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.IsListening, newRoom.Rtmp, newRoom.IsPush); err != nil {
 				return err
 			}
 		} else {
@@ -580,8 +600,8 @@ func addRtmp(writer http.ResponseWriter, r *http.Request) {
 
 	rtmpStr := strings.Trim(rtmpValue, " ")
 
-	// 如果 RTMP 不以 "http://" 或 "https://" 开头，则添加 "https://" 前缀
-	if !strings.HasPrefix(rtmpStr, "rtmp://") {
+	// 如果 RTMP 不以 "rtmp://" 或 "rtmps://" 开头，则添加 "rtmp://" 前缀
+	if !strings.HasPrefix(rtmpStr, "rtmp://") && !strings.HasPrefix(rtmpStr, "rtmps://") {
 		rtmpStr = "rtmp://" + rtmpStr
 	}
 
@@ -641,7 +661,7 @@ func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
 	// 根据请求的操作执行相应的操作
 	switch vars["action"] {
 	case "start":
-		if err := startListening(r.Context(), live); err != nil {
+		if err := startPushing(r.Context(), live); err != nil {
 			resp.ErrNo = http.StatusBadRequest
 			resp.ErrMsg = err.Error()
 			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
@@ -650,7 +670,7 @@ func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
 			room.IsPush = true
 		}
 	case "stop":
-		if err := stopListening(r.Context(), live.GetLiveId()); err != nil {
+		if err := stopPushing(r.Context(), live.GetLiveId()); err != nil {
 			resp.ErrNo = http.StatusBadRequest
 			resp.ErrMsg = err.Error()
 			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
@@ -666,4 +686,16 @@ func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
 	}
 	// 解析直播信息并返回
 	writeJSON(writer, parseInfo(r.Context(), live))
+}
+
+// 开始监听直播
+func startPushing(ctx context.Context, live live.Live) error {
+	inst := instance.GetInstance(ctx)
+	return inst.ListenerManager.(listeners.Manager).AddListener(ctx, live)
+}
+
+// 停止监听直播
+func stopPushing(ctx context.Context, liveId live.ID) error {
+	inst := instance.GetInstance(ctx)
+	return inst.ListenerManager.(listeners.Manager).RemoveListener(ctx, liveId)
 }

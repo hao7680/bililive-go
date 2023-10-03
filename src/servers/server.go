@@ -55,7 +55,7 @@ func initMux(ctx context.Context) *mux.Router {
 	// apiRoute.HandleFunc("/lives/{id}/rtmp", getRtmp).Methods("GET")
 	apiRoute.HandleFunc("/lives/{id}/rtmp", addRtmp).Methods("POST")
 	// apiRoute.HandleFunc("/lives/{id}/rtmp", removeRtmp).Methods("DELETE")
-	apiRoute.HandleFunc("/lives/{id}/rtmp/{action}", parseLiveAction).Methods("GET")
+	apiRoute.HandleFunc("/lives/{id}/rtmp/{action}", parseRtmpAction).Methods("GET")
 	apiRoute.HandleFunc("/rtmps/{id}/{action}", parseRtmpAction).Methods("GET")
 	apiRoute.Handle("/metrics", promhttp.Handler()) // 用于处理 Prometheus 监控数据
 
