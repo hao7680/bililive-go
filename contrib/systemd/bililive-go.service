@@ -6,7 +6,7 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/var/log/
-ExecStart=/usr/bin/bililive-go -c /etc/bililive-go/config.yml
+ExecStart=/usr/local/bin/bililive-go -c /etc/bililive-go.config.yml
 Restart=on-failure
 
 [Install]

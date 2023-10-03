@@ -90,6 +90,8 @@ type LiveRoom struct {
 	IsListening bool    `yaml:"is_listening"` // 是否监听直播
 	LiveId      live.ID `yaml:"-"`            // 直播ID
 	Quality     int     `yaml:"quality"`      // 视频质量
+	Rtmp        string  `yaml:"rtmp"`         // 转推地址
+	IsPush      bool    `yaml:"is_push"`      // 是否转推
 }
 
 // liveRoomAlias用于在配置中同时支持字符串和LiveRoom格式。
@@ -204,6 +206,24 @@ func (c *Config) RemoveLiveRoomByUrl(url string) error {
 	return errors.New("移除房间失败：" + url)
 }
 
+// UpdateLiveRoomByUrl 通过URL更新直播房间。
+func (c *Config) UpdateLiveRoomByUrl(url string, room *LiveRoom) error {
+	c.RefreshLiveRoomIndexCache()
+	if index, ok := c.liveRoomIndexCache[url]; ok {
+		if index >= 0 && index < len(c.LiveRooms) && c.LiveRooms[index].Url == url {
+			// 从指针 room 创建一个新的 LiveRoom 值
+			newRoom := *room
+
+			// 将新的 LiveRoom 值追加到切片中
+			c.LiveRooms = append(c.LiveRooms[:index], newRoom)
+			c.LiveRooms = append(c.LiveRooms, c.LiveRooms[index+1:]...)
+
+			return nil
+		}
+	}
+	return errors.New("更新房间失败：" + url)
+}
+
 // GetLiveRoomByUrl 通过URL获取直播房间。
 func (c *Config) GetLiveRoomByUrl(url string) (*LiveRoom, error) {
 	room, err := c.getLiveRoomByUrlImpl(url)
@@ -268,4 +288,9 @@ func (c Config) GetFilePath() (string, error) {
 		return "", errors.New("未设置配置文件路径")
 	}
 	return c.File, nil
+}
+
+// GetRtmpUrl 获取转推 URL
+func (l *LiveRoom) GetRtmpUrl() string {
+	return l.Rtmp
 }

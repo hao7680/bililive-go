@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,16 +25,32 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/recorders"
 )
 
-// FIXME: 移除这个函数
+// parseInfo 从直播信息对象中提取相关数据并构建一个 live.Info 结构。
 func parseInfo(ctx context.Context, l live.Live) *live.Info {
 	// 获取应用程序实例
 	inst := instance.GetInstance(ctx)
-	// 从缓存中获取直播信息
+
+	// 获取直播的原始 URL
+	live_url := l.GetRawUrl()
+
+	// 使用 URL 从配置中获取房间信息
+	room, _ := inst.Config.GetLiveRoomByUrl(live_url)
+
+	// 获取房间的推流地址（RTMP）
+	rtmp := room.GetRtmpUrl()
+
+	// 从缓存中获取直播信息对象
 	obj, _ := inst.Cache.Get(l)
 	info := obj.(*live.Info)
-	// 检查是否有监听器和录制器
+
+	// 将推流地址赋给 info 结构的字段
+	info.RtmpUrl = rtmp
+
+	// 检查是否有监听器和录制器，并将结果存储在相应的字段中
 	info.Listening = inst.ListenerManager.(listeners.Manager).HasListener(ctx, l.GetLiveId())
 	info.Recording = inst.RecorderManager.(recorders.Manager).HasRecorder(ctx, l.GetLiveId())
+
+	// 返回填充好数据的 live.Info 结构
 	return info
 }
 
@@ -49,6 +65,7 @@ func getAllLives(writer http.ResponseWriter, r *http.Request) {
 		// 解析直播信息并添加到切片中
 		lives = append(lives, parseInfo(r.Context(), v))
 	}
+
 	// 按某个标准排序直播信息切片
 	sort.Sort(lives)
 	// 返回 JSON 格式的直播信息切片
@@ -159,7 +176,7 @@ Post 数据示例
 */
 func addLives(writer http.ResponseWriter, r *http.Request) {
 	// 读取请求的数据
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJSON(writer, map[string]interface{}{
 			"error": err.Error(),
@@ -327,7 +344,7 @@ func getRawConfig(writer http.ResponseWriter, r *http.Request) {
 // 更新原始配置信息
 func putRawConfig(writer http.ResponseWriter, r *http.Request) {
 	// 读取请求的数据
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
 			ErrNo:  http.StatusBadRequest,
@@ -366,7 +383,7 @@ func putRawConfig(writer http.ResponseWriter, r *http.Request) {
 	}
 	newConfig.LiveRooms = oldConfig.LiveRooms
 	// 将配置信息持久化到文件
-	ioutil.WriteFile(configPath, []byte(jsonBody["config"].(string)), os.ModePerm)
+	os.WriteFile(configPath, []byte(jsonBody["config"].(string)), os.ModePerm)
 	inst.Config = newConfig
 	newConfig.RefreshLiveRoomIndexCache()
 	// 返回成功响应
@@ -458,7 +475,7 @@ func getFileInfo(writer http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files, err := ioutil.ReadDir(absPath)
+	files, err := os.ReadDir(absPath)
 	if err != nil {
 		writeJSON(writer, commonResp{
 			ErrMsg: "获取目录失败",
@@ -475,7 +492,7 @@ func getFileInfo(writer http.ResponseWriter, r *http.Request) {
 	jsonFiles := make([]jsonFile, len(files))
 	json := struct {
 		Files []jsonFile `json:"files"`
-		Path  string     `json:"path`
+		Path  string     `json:"path"`
 	}{
 		Files: jsonFiles,
 		Path:  path,
@@ -483,13 +500,170 @@ func getFileInfo(writer http.ResponseWriter, r *http.Request) {
 	for i, file := range files {
 		jsonFiles[i].IsFolder = file.IsDir()
 		jsonFiles[i].Name = file.Name()
-		jsonFiles[i].LastModified = file.ModTime().Unix()
+
+		// 使用 os.Stat 获取文件的详细信息
+		fileInfo, err := os.Stat(filepath.Join(absPath, file.Name()))
+		if err != nil {
+			writeJSON(writer, commonResp{
+				ErrMsg: "获取文件信息失败",
+			})
+			return
+		}
+		jsonFiles[i].LastModified = fileInfo.ModTime().Unix()
 		if !file.IsDir() {
-			jsonFiles[i].Size = file.Size()
+			jsonFiles[i].Size = fileInfo.Size()
 		}
 	}
 	json.Files = jsonFiles
 
 	// 返回文件信息
 	writeJSON(writer, json)
+}
+
+// 添加直播转推地址的实现函数
+func addRtmp(writer http.ResponseWriter, r *http.Request) {
+	// 读取请求的数据
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
+			ErrNo:  http.StatusBadRequest,
+			ErrMsg: err.Error(),
+		})
+		return
+	}
+
+	result := gjson.ParseBytes(b)
+
+	// 获取应用程序实例
+	inst := instance.GetInstance(r.Context())
+	// 获取请求中的变量
+	vars := mux.Vars(r)
+	resp := commonResp{}
+	// 根据直播 ID 查找直播
+	live, ok := inst.Lives[live.ID(vars["id"])]
+	if !ok {
+		// 直播不存在，返回错误响应
+		resp.ErrNo = http.StatusNotFound
+		resp.ErrMsg = fmt.Sprintf("live id: %s 找不到", vars["id"])
+		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
+		return
+	}
+	// 根据直播 URL 获取房间信息
+	room, err := inst.Config.GetLiveRoomByUrl(live.GetRawUrl())
+	if err != nil {
+		resp.ErrNo = http.StatusNotFound
+		resp.ErrMsg = fmt.Sprintf("房间：%s 找不到", live.GetRawUrl())
+		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
+		return
+	}
+
+	rtmpValue, rtmpExists := result.Get("rtmp").Value().(string)
+	isPushValue, isPushExists := result.Get("push").Value().(bool)
+
+	if !rtmpExists || !isPushExists {
+		// 处理缺少必要字段的情况
+		errMsg := ""
+		if !rtmpExists {
+			errMsg = "rtmp参数不存在"
+		}
+		if !isPushExists {
+			if errMsg != "" {
+				errMsg += "和"
+			}
+			errMsg += "push参数不存在"
+		}
+		writeJSON(writer, commonResp{
+			ErrMsg: errMsg,
+		})
+		return
+	}
+
+	rtmpStr := strings.Trim(rtmpValue, " ")
+
+	// 如果 RTMP 不以 "http://" 或 "https://" 开头，则添加 "https://" 前缀
+	if !strings.HasPrefix(rtmpStr, "rtmp://") {
+		rtmpStr = "rtmp://" + rtmpStr
+	}
+
+	room.Rtmp = rtmpStr
+	room.IsPush = isPushValue
+
+	// 获取应用程序配置
+	c := inst.Config
+
+	if err := c.UpdateLiveRoomByUrl(live.GetRawUrl(), room); err != nil {
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
+			ErrNo:  http.StatusBadRequest,
+			ErrMsg: err.Error(),
+		})
+		return
+	}
+
+	// 将配置信息持久化到文件
+	if err := c.Marshal(); err != nil {
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
+			ErrNo:  http.StatusBadRequest,
+			ErrMsg: err.Error(),
+		})
+		return
+	}
+
+	// 返回成功响应
+	writeJsonWithStatusCode(writer, http.StatusOK, commonResp{
+		Data: "OK",
+	})
+}
+
+// 解析推流操作
+func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
+	// 获取应用程序实例
+	inst := instance.GetInstance(r.Context())
+	// 获取请求中的变量
+	vars := mux.Vars(r)
+	resp := commonResp{}
+	// 根据直播 ID 查找直播
+	live, ok := inst.Lives[live.ID(vars["id"])]
+	if !ok {
+		// 直播不存在，返回错误响应
+		resp.ErrNo = http.StatusNotFound
+		resp.ErrMsg = fmt.Sprintf("live id: %s 找不到", vars["id"])
+		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
+		return
+	}
+	// 根据直播 URL 获取房间信息
+	room, err := inst.Config.GetLiveRoomByUrl(live.GetRawUrl())
+	if err != nil {
+		resp.ErrNo = http.StatusNotFound
+		resp.ErrMsg = fmt.Sprintf("房间：%s 找不到", live.GetRawUrl())
+		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
+		return
+	}
+	// 根据请求的操作执行相应的操作
+	switch vars["action"] {
+	case "start":
+		if err := startListening(r.Context(), live); err != nil {
+			resp.ErrNo = http.StatusBadRequest
+			resp.ErrMsg = err.Error()
+			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
+			return
+		} else {
+			room.IsPush = true
+		}
+	case "stop":
+		if err := stopListening(r.Context(), live.GetLiveId()); err != nil {
+			resp.ErrNo = http.StatusBadRequest
+			resp.ErrMsg = err.Error()
+			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
+			return
+		} else {
+			room.IsPush = false
+		}
+	default:
+		resp.ErrNo = http.StatusBadRequest
+		resp.ErrMsg = fmt.Sprintf("无效操作：%s", vars["action"])
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
+		return
+	}
+	// 解析直播信息并返回
+	writeJSON(writer, parseInfo(r.Context(), live))
 }

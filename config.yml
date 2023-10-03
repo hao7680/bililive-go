@@ -1,7 +1,7 @@
 rpc:
   enable: true
-  bind: 127.0.0.1:8080
-debug: false
+  bind: 0.0.0.0:8080
+debug: true
 interval: 20
 out_put_path: /mnt/video/bililive-go
 ffmpeg_path: ""
@@ -12,7 +12,12 @@ log:
 feature:
   use_native_flv_parser: false
   remove_symbol_other_character: false
-live_rooms: []
+live_rooms:
+- url: https://www.douyu.com/3357246?dyshid=0-c74c82500bdaa7990ec4710000021601&dyshci=33
+  is_listening: false
+  quality: 0
+  rtmp: rtmp://1243
+  is_push: false
 out_put_tmpl: ""
 video_split_strategies:
   on_room_name_changed: false
