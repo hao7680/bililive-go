@@ -189,22 +189,35 @@ func (p *Parser) ParseLiveStream(ctx context.Context, url *url.URL, live live.Li
 	}
 
 	fileName := strings.TrimSuffix(file, filepath.Ext(file))
+	fileName = strings.TrimSuffix(fileName, "_%03d")
+
 	if encoder == "hevc" {
 		args = hevcArgs
 		file = fileName + ".mp4"
 	} else if encoder == "h264" {
 		args = h264Args
+	} else if encoder == "cache" {
+		m3u8 := fileName + ".m3u8"
+		args = append(args, "-f", "segment")       // 切片
+		args = append(args, "-segment_time", "60") // 切片时长
+		args = append(args, "-segment_wrap", "10") // 切片循环
+		args = append(args, "-segment_list", m3u8) // 切片列表
+		// args = append(args, "-fs", "50M")          // 切片大小
 	}
 
-	inst := instance.GetInstance(ctx)
-	MaxFileSize := inst.Config.VideoSplitStrategies.MaxFileSize
-	if MaxFileSize < 0 {
-		inst.Logger.Infof("无效的MaxFileSize：%d", MaxFileSize)
-	} else if MaxFileSize > 0 {
-		args = append(args, "-fs", strconv.Itoa(MaxFileSize))
+	if fileName == filepath.Ext(file) {
+		args = append(args, "-buffer_size", "250M") // 缓存
 	}
 
-	// file = "rtmp://a.rtmp.youtube.com/live2/jw3m-ee6m-574r-5u3c-2qb1"
+	if encoder != "cache" {
+		inst := instance.GetInstance(ctx)
+		MaxFileSize := inst.Config.VideoSplitStrategies.MaxFileSize
+		if MaxFileSize < 0 {
+			inst.Logger.Infof("无效的MaxFileSize：%d", MaxFileSize)
+		} else if MaxFileSize > 0 {
+			args = append(args, "-fs", strconv.Itoa(MaxFileSize))
+		}
+	}
 
 	args = append(args, file)
 

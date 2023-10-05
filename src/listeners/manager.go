@@ -79,7 +79,7 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 		room.LiveId = live.GetLiveId()
 
 		// 9. 如果房间正在监听中，尝试替换监听器。
-		if room.IsListening {
+		if room.Listen {
 			if err := m.replaceListener(ctx, initializingLive, live); err != nil {
 				// 10. 如果替换监听器出错，记录错误日志。
 				logger.WithFields(map[string]interface{}{

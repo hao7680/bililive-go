@@ -16,6 +16,12 @@ const LiveStart events.EventType = "LiveStart"
 // LiveEnd 表示直播结束的事件类型。
 const LiveEnd events.EventType = "LiveEnd"
 
+// RecorderStart 表示开启推送的事件类型。
+const RecorderStart events.EventType = "RecorderStart"
+
+// RecorderEnd 表示关闭推送的事件类型。
+const RecorderEnd events.EventType = "RecorderEnd"
+
 // RoomNameChanged 表示房间名称变更的事件类型。
 const RoomNameChanged events.EventType = "RoomNameChanged"
 

@@ -21,4 +21,5 @@ type Instance struct {
 	EventDispatcher interfaces.Module     // EventDispatcher 是事件分发器模块。
 	ListenerManager interfaces.Module     // ListenerManager 是监听器管理器模块。
 	RecorderManager interfaces.Module     // RecorderManager 是录制器管理器模块。
+	PusherManager   interfaces.Module     // PusherManager 是推送器管理器模块。
 }

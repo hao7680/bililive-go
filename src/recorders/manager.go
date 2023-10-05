@@ -51,6 +51,21 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 	// 1. 监听直播开始事件。
 	ed.AddEventListener(listeners.LiveStart, events.NewEventListener(func(event *events.Event) {
 		live := event.Object.(live.Live) // 类型断言，将event.Object转换为live.Live类型。
+
+		// 获取应用程序实例
+		inst := instance.GetInstance(ctx)
+
+		// 获取应用程序配置
+		config := inst.Config
+
+		// 获取直播间配置
+		room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
+
+		// 如果未开启录制则退出
+		if !room.Record {
+			return
+		}
+
 		// 尝试添加一个新的录制器。
 		if err := m.AddRecorder(ctx, live); err != nil {
 			// 如果添加录制器失败，则记录错误。

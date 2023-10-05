@@ -50,13 +50,10 @@ func initMux(ctx context.Context) *mux.Router {
 	apiRoute.HandleFunc("/lives", addLives).Methods("POST")
 	apiRoute.HandleFunc("/lives/{id}", getLive).Methods("GET")
 	apiRoute.HandleFunc("/lives/{id}", removeLive).Methods("DELETE")
-	apiRoute.HandleFunc("/lives/{id}/{action}", parseLiveAction).Methods("GET")
+	apiRoute.HandleFunc("/lives/{id}/{action}", mainHandler).Methods("GET")
 	apiRoute.HandleFunc("/file/{path:.*}", getFileInfo).Methods("GET")
-	// apiRoute.HandleFunc("/lives/{id}/rtmp", getRtmp).Methods("GET")
 	apiRoute.HandleFunc("/lives/{id}/rtmp", addRtmp).Methods("POST")
-	// apiRoute.HandleFunc("/lives/{id}/rtmp", removeRtmp).Methods("DELETE")
-	apiRoute.HandleFunc("/lives/{id}/rtmp/{action}", parseRtmpAction).Methods("GET")
-	apiRoute.HandleFunc("/rtmps/{id}/{action}", parseRtmpAction).Methods("GET")
+	apiRoute.HandleFunc("/lives/{id}/{resource}/{action}", mainHandler).Methods("GET")
 	apiRoute.Handle("/metrics", promhttp.Handler()) // 用于处理 Prometheus 监控数据
 
 	// 设置静态文件服务

@@ -9,7 +9,7 @@ type Info struct {
 	Live                          Live
 	HostName, RoomName            string
 	RtmpUrl                       string
-	IsPush                        bool
+	Push                          bool
 	Status                        bool // 表示是否正在直播，可能最好重命名为 IsLiving
 	Listening, Recording, Pushing bool
 	Initializing                  bool
@@ -34,7 +34,7 @@ func (i *Info) MarshalJSON() ([]byte, error) {
 		LastStartTimeUnix int64  `json:"last_start_time_unix,omitempty"` // 上次开始时间的 UNIX 时间戳
 		AudioOnly         bool   `json:"audio_only"`                     // 是否仅音频直播
 		RtmpUrl           string `json:"rtmp_url"`                       // 直播转推 URL
-		IsPush            bool   `json:"is_push"`                        // 是否开启直播转推
+		Push              bool   `json:"is_push"`                        // 是否开启直播转推
 	}{
 		Id:             i.Live.GetLiveId(),
 		LiveUrl:        i.Live.GetRawUrl(),
@@ -48,7 +48,7 @@ func (i *Info) MarshalJSON() ([]byte, error) {
 		Initializing:   i.Initializing,
 		AudioOnly:      i.AudioOnly,
 		RtmpUrl:        i.RtmpUrl,
-		IsPush:         i.IsPush,
+		Push:           i.Push,
 	}
 	if !i.Live.GetLastStartTime().IsZero() {
 		t.LastStartTime = i.Live.GetLastStartTime().Format("2006-01-02 15:04:05")

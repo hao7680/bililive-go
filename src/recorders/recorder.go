@@ -121,33 +121,59 @@ func (r *recorder) tryRecord(ctx context.Context) {
 	obj, _ := r.cache.Get(r.Live)
 	info := obj.(*live.Info)
 
-	// 设置文件名模板
-	tmpl := getDefaultFileNameTmpl(r.config)
-	if r.config.OutputTmpl != "" {
-		_tmpl, err := template.New("user_filename").Funcs(utils.GetFuncMap(r.config)).Parse(r.config.OutputTmpl)
-		if err == nil {
-			tmpl = _tmpl
+	isCache := false
+
+	fileName := ""
+	jsonFilePath := ""
+
+	if isCache {
+		liveId := string(r.Live.GetLiveId())
+		fileName = filepath.Join(r.OutPutPath, "cache", liveId+"_%03d.ts")
+		jsonFilePath = filepath.Join(r.OutPutPath, "cache", liveId+".metadata.json")
+	}
+
+	url := urls[0]
+
+	if !isCache {
+		// 设置文件名模板
+		tmpl := getDefaultFileNameTmpl(r.config)
+		if r.config.OutputTmpl != "" {
+			_tmpl, err := template.New("user_filename").Funcs(utils.GetFuncMap(r.config)).Parse(r.config.OutputTmpl)
+			if err == nil {
+				tmpl = _tmpl
+			}
+		}
+
+		// 生成文件名
+		buf := new(bytes.Buffer)
+		if err = tmpl.Execute(buf, info); err != nil {
+			panic(fmt.Sprintf("无法渲染文件名，错误：%v", err))
+		}
+		fileName = filepath.Join(r.OutPutPath, buf.String())
+
+		// 如果URL中包含 "m3u8"，则将文件名更改为 .ts 扩展名
+		if strings.Contains(url.Path, "m3u8") {
+			fileName = fileName[:len(fileName)-4] + ".ts"
+		}
+
+		// 如果只有音频，将文件名更改为 .aac 扩展名
+		if info.AudioOnly {
+			fileName = fileName[:strings.LastIndex(fileName, ".")] + ".aac"
+		}
+
+		// metadata.json
+		// 如果 fileName 有扩展名，则替换为 ".json"，否则添加 ".json"
+		ext := filepath.Ext(fileName)
+		if ext != "" {
+			// 有扩展名，直接替换为 ".metadata.json"
+			jsonFilePath = fileName[:len(fileName)-len(ext)] + ".metadata.json"
+		} else {
+			// 没有扩展名，直接加上 ".metadata.json"
+			jsonFilePath = fileName + ".metadata.json"
 		}
 	}
 
-	// 生成文件名
-	buf := new(bytes.Buffer)
-	if err = tmpl.Execute(buf, info); err != nil {
-		panic(fmt.Sprintf("无法渲染文件名，错误：%v", err))
-	}
-	fileName := filepath.Join(r.OutPutPath, buf.String())
 	outputPath, _ := filepath.Split(fileName)
-	url := urls[0]
-
-	// 如果URL中包含 "m3u8"，则将文件名更改为 .ts 扩展名
-	if strings.Contains(url.Path, "m3u8") {
-		fileName = fileName[:len(fileName)-4] + ".ts"
-	}
-
-	// 如果只有音频，将文件名更改为 .aac 扩展名
-	if info.AudioOnly {
-		fileName = fileName[:strings.LastIndex(fileName, ".")] + ".aac"
-	}
 
 	// 创建输出目录
 	if err = mkdir(outputPath); err != nil {
@@ -173,21 +199,9 @@ func (r *recorder) tryRecord(ctx context.Context) {
 	// 设置并关闭当前解析器
 	r.setAndCloseParser(p)
 
-	// metadata.json
-	// 如果 fileName 有扩展名，则替换为 ".json"，否则添加 ".json"
-	ext := filepath.Ext(fileName)
-	jsonFilePath := ""
-	if ext != "" {
-		// 有扩展名，直接替换为 ".metadata.json"
-		jsonFilePath = fileName[:len(fileName)-len(ext)] + ".metadata.json"
-	} else {
-		// 没有扩展名，直接加上 ".metadata.json"
-		jsonFilePath = fileName + ".metadata.json"
-	}
-
 	// 记录开始时间
 	r.startTime = time.Now()
-	r.getLogger().Info("开始解析直播流(" + url.String() + ", " + fileName + ")")
+	r.getLogger().Debug("开始解析直播流(" + url.String() + ", " + fileName + ")")
 
 	jsonData := info
 	jsonData.Recording = true
@@ -199,7 +213,7 @@ func (r *recorder) tryRecord(ctx context.Context) {
 	r.getLogger().Println(result)
 
 	// 记录结束时间
-	r.getLogger().Info("结束解析直播流(" + url.String() + ", " + fileName + ")")
+	r.getLogger().Debug("结束解析直播流(" + url.String() + ", " + fileName + ")")
 
 	jsonData.Recording = false
 	// 再次保存 JSON 数据到文件

@@ -181,3 +181,7 @@ func (p *Parser) doWrite(ctx context.Context, b []byte) error {
 	}
 	return nil
 }
+
+func (p *Parser) PushLiveStream(ctx context.Context, cacheFile string, rtmpUrl string) (err error) {
+	return
+}

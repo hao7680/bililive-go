@@ -86,12 +86,16 @@ type Config struct {
 
 // LiveRoom包含直播房间信息。
 type LiveRoom struct {
-	Url         string  `yaml:"url"`          // 直播房间URL
-	IsListening bool    `yaml:"is_listening"` // 是否监听直播
-	LiveId      live.ID `yaml:"-"`            // 直播ID
-	Quality     int     `yaml:"quality"`      // 视频质量
-	Rtmp        string  `yaml:"rtmp"`         // 转推地址
-	IsPush      bool    `yaml:"is_push"`      // 是否转推
+	Url       string  `yaml:"url"`          // 直播房间URL
+	Listen    bool    `yaml:"listen"`       // 监听
+	Listening bool    `yaml:"is_listening"` // 监听状态
+	Record    bool    `yaml:"record"`       // 录制
+	Recordind bool    `yaml:"is_recording"` // 录制状态
+	LiveId    live.ID `yaml:"-"`            // 直播ID
+	Quality   int     `yaml:"quality"`      // 视频质量
+	Rtmp      string  `yaml:"rtmp"`         // 转推地址
+	Push      bool    `yaml:"push"`         // 转推
+	Pushing   bool    `yaml:"is_pushing"`   // 转推状态
 }
 
 // liveRoomAlias用于在配置中同时支持字符串和LiveRoom格式。
@@ -100,7 +104,7 @@ type liveRoomAlias LiveRoom
 // UnmarshalYAML 实现了LiveRoom的自定义反序列化。
 func (l *LiveRoom) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	liveRoomAlias := liveRoomAlias{
-		IsListening: true,
+		Listen: true,
 	}
 	if err := unmarshal(&liveRoomAlias); err != nil {
 		var url string
@@ -122,7 +126,7 @@ func NewLiveRoomsWithStrings(strings []string) []LiveRoom {
 	liveRooms := make([]LiveRoom, len(strings))
 	for index, url := range strings {
 		liveRooms[index].Url = url
-		liveRooms[index].IsListening = true
+		liveRooms[index].Listen = true
 		liveRooms[index].Quality = 0
 	}
 	return liveRooms

@@ -23,6 +23,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/metrics"
 	"github.com/yuhaohwang/bililive-go/src/pkg/events"
 	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
+	"github.com/yuhaohwang/bililive-go/src/pushers"
 	"github.com/yuhaohwang/bililive-go/src/recorders"
 	"github.com/yuhaohwang/bililive-go/src/servers"
 )
@@ -153,14 +154,19 @@ func main() {
 			logger.WithError(err).Fatalf("初始化服务器失败")
 		}
 	}
+
 	// 创建监听器管理器和录制器管理器，并启动它们。
 	lm := listeners.NewManager(ctx)
 	rm := recorders.NewManager(ctx)
+	pm := pushers.NewManager(ctx)
 	if err := lm.Start(ctx); err != nil {
 		logger.Fatalf("初始化监听器管理器失败，错误: %s", err)
 	}
 	if err := rm.Start(ctx); err != nil {
 		logger.Fatalf("初始化录制器管理器失败，错误: %s", err)
+	}
+	if err := pm.Start(ctx); err != nil {
+		logger.Fatalf("初始化推送器管理器失败，错误: %s", err)
 	}
 
 	// 初始化指标收集器并启动它。
@@ -175,7 +181,7 @@ func main() {
 			logger.WithFields(map[string]interface{}{"room": _live.GetRawUrl()}).Error(err)
 			panic(err)
 		}
-		if room.IsListening {
+		if room.Listen {
 			if err := lm.AddListener(ctx, _live); err != nil {
 				logger.WithFields(map[string]interface{}{"url": _live.GetRawUrl()}).Error(err)
 			}

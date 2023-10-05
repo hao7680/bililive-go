@@ -22,6 +22,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/instance"
 	"github.com/yuhaohwang/bililive-go/src/listeners"
 	"github.com/yuhaohwang/bililive-go/src/live"
+	"github.com/yuhaohwang/bililive-go/src/pushers"
 	"github.com/yuhaohwang/bililive-go/src/recorders"
 )
 
@@ -44,6 +45,10 @@ func parseInfo(ctx context.Context, l live.Live) *live.Info {
 		rtmp := room.Rtmp
 		// 将推流地址赋给 info 结构的字段
 		info.RtmpUrl = rtmp
+		// 获取房间的推流地址（RTMP）
+		isPush := room.Push
+		// 将是否推流赋给 info 结构的字段
+		info.Push = isPush
 	}
 
 	// 检查是否有监听器和录制器，并将结果存储在相应的字段中
@@ -90,72 +95,6 @@ func getLive(writer http.ResponseWriter, r *http.Request) {
 	}
 	// 解析直播信息并返回
 	writeJSON(writer, parseInfo(r.Context(), live))
-}
-
-// 解析直播操作
-func parseLiveAction(writer http.ResponseWriter, r *http.Request) {
-	// 获取应用程序实例
-	inst := instance.GetInstance(r.Context())
-	// 获取请求中的变量
-	vars := mux.Vars(r)
-	resp := commonResp{}
-	// 根据直播 ID 查找直播
-	live, ok := inst.Lives[live.ID(vars["id"])]
-	if !ok {
-		// 直播不存在，返回错误响应
-		resp.ErrNo = http.StatusNotFound
-		resp.ErrMsg = fmt.Sprintf("live id: %s 找不到", vars["id"])
-		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
-		return
-	}
-	// 根据直播 URL 获取房间信息
-	room, err := inst.Config.GetLiveRoomByUrl(live.GetRawUrl())
-	if err != nil {
-		resp.ErrNo = http.StatusNotFound
-		resp.ErrMsg = fmt.Sprintf("房间：%s 找不到", live.GetRawUrl())
-		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
-		return
-	}
-	// 根据请求的操作执行相应的操作
-	switch vars["action"] {
-	case "start":
-		if err := startListening(r.Context(), live); err != nil {
-			resp.ErrNo = http.StatusBadRequest
-			resp.ErrMsg = err.Error()
-			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
-			return
-		} else {
-			room.IsListening = true
-		}
-	case "stop":
-		if err := stopListening(r.Context(), live.GetLiveId()); err != nil {
-			resp.ErrNo = http.StatusBadRequest
-			resp.ErrMsg = err.Error()
-			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
-			return
-		} else {
-			room.IsListening = false
-		}
-	default:
-		resp.ErrNo = http.StatusBadRequest
-		resp.ErrMsg = fmt.Sprintf("无效操作：%s", vars["action"])
-		writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
-		return
-	}
-	// 解析直播信息并返回
-	writeJSON(writer, parseInfo(r.Context(), live))
-}
-
-// 开始监听直播
-func startListening(ctx context.Context, live live.Live) error {
-	inst := instance.GetInstance(ctx)
-	return inst.ListenerManager.(listeners.Manager).AddListener(ctx, live)
-}
-
-// 停止监听直播
-func stopListening(ctx context.Context, liveId live.ID) error {
-	inst := instance.GetInstance(ctx)
-	return inst.ListenerManager.(listeners.Manager).RemoveListener(ctx, liveId)
 }
 
 /*
@@ -256,15 +195,15 @@ func addLiveImpl(ctx context.Context, urlStr string, isListen bool, rtmpStr stri
 				return nil, errors.New("无法解析 RTMP：" + rtmpStr)
 			}
 			info.RtmpUrl = r.String()
-			info.IsPush = isPush
+			info.Push = isPush
 		}
 
 		liveRoom := configs.LiveRoom{
-			Url:         u.String(),
-			IsListening: isListen,
-			LiveId:      newLive.GetLiveId(),
-			Rtmp:        rtmpStr,
-			IsPush:      isPush,
+			Url:    u.String(),
+			Listen: isListen,
+			LiveId: newLive.GetLiveId(),
+			Rtmp:   rtmpStr,
+			Push:   isPush,
 		}
 		inst.Config.LiveRooms = append(inst.Config.LiveRooms, liveRoom)
 	}
@@ -422,7 +361,7 @@ func applyLiveRoomsByConfig(ctx context.Context, newLiveRooms []configs.LiveRoom
 		newUrlMap[newRoom.Url] = &newRoom
 		if room, err := currentConfig.GetLiveRoomByUrl(newRoom.Url); err != nil {
 			// 添加直播信息
-			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.IsListening, newRoom.Rtmp, newRoom.IsPush); err != nil {
+			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.Listen, newRoom.Rtmp, newRoom.Push); err != nil {
 				return err
 			}
 		} else {
@@ -430,19 +369,19 @@ func applyLiveRoomsByConfig(ctx context.Context, newLiveRooms []configs.LiveRoom
 			if !ok {
 				return fmt.Errorf("live id: %s 找不到", room.LiveId)
 			}
-			if room.IsListening != newRoom.IsListening {
-				if newRoom.IsListening {
+			if room.Listen != newRoom.Listen {
+				if newRoom.Listen {
 					// 开始监听
-					if err := startListening(ctx, live); err != nil {
+					if err := actionMap["listen"]["start"](ctx, live); err != nil {
 						return err
 					}
 				} else {
 					// 停止监听
-					if err := stopListening(ctx, live.GetLiveId()); err != nil {
+					if err := actionMap["listen"]["stop"](ctx, live); err != nil {
 						return err
 					}
 				}
-				room.IsListening = newRoom.IsListening
+				room.Listen = newRoom.Listen
 			}
 		}
 	}
@@ -606,27 +545,7 @@ func addRtmp(writer http.ResponseWriter, r *http.Request) {
 	}
 
 	room.Rtmp = rtmpStr
-	room.IsPush = isPushValue
-
-	// 获取应用程序配置
-	c := inst.Config
-
-	if err := c.UpdateLiveRoomByUrl(live.GetRawUrl(), room); err != nil {
-		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
-			ErrNo:  http.StatusBadRequest,
-			ErrMsg: err.Error(),
-		})
-		return
-	}
-
-	// 将配置信息持久化到文件
-	if err := c.Marshal(); err != nil {
-		writeJsonWithStatusCode(writer, http.StatusBadRequest, commonResp{
-			ErrNo:  http.StatusBadRequest,
-			ErrMsg: err.Error(),
-		})
-		return
-	}
+	room.Push = isPushValue
 
 	// 返回成功响应
 	writeJsonWithStatusCode(writer, http.StatusOK, commonResp{
@@ -634,23 +553,143 @@ func addRtmp(writer http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// 解析推流操作
-func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
-	// 获取应用程序实例
+type ActionFunc func(ctx context.Context, live live.Live) error
+
+var actionMap = map[string]map[string]ActionFunc{
+	"listen": {
+		"start": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.ListenerManager.(listeners.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert ListenerManager to listeners.Manager")
+			}
+			return manager.AddListener(ctx, live)
+		},
+		"stop": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.ListenerManager.(listeners.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert ListenerManager to listeners.Manager")
+			}
+			return manager.RemoveListener(ctx, live.GetLiveId())
+		},
+	},
+	"record": {
+		"start": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.RecorderManager.(recorders.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert RecorderManager to recorders.Manager")
+			}
+			return manager.AddRecorder(ctx, live)
+		},
+		"stop": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.RecorderManager.(recorders.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert RecorderManager to recorders.Manager")
+			}
+			return manager.RemoveRecorder(ctx, live.GetLiveId())
+		},
+	},
+	"push": {
+		"start": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.PusherManager.(pushers.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert PusherManager to pushers.Manager")
+			}
+			return manager.AddPusher(ctx, live)
+		},
+		"stop": func(ctx context.Context, live live.Live) error {
+			inst := instance.GetInstance(ctx)
+			manager, ok := inst.PusherManager.(pushers.Manager)
+			if !ok {
+				return fmt.Errorf("cannot convert PusherManager to pushers.Manager")
+			}
+			return manager.RemovePusher(ctx, live.GetLiveId())
+		},
+	},
+}
+
+func executeAction(ctx context.Context, live live.Live, room *configs.LiveRoom, resource string, action string) error {
+	setRoomStatus := func(field *bool, status bool) {
+		*field = status
+	}
+
+	setRoomErrorStatus := func(field *bool, status bool, err error) error {
+		*field = status
+		return err
+	}
+
+	_, exists := actionMap[resource]
+
+	if !exists {
+		return errors.New("无效资源: " + resource)
+	}
+
+	_, exists = actionMap[resource][action]
+	if !exists {
+		return errors.New("无效操作: " + action)
+	}
+
+	err := actionMap[resource][action](ctx, live)
+
+	switch resource {
+	case "listen":
+		if action == "start" {
+			if err != nil {
+				return setRoomErrorStatus(&room.Listening, true, err)
+			}
+			setRoomStatus(&room.Listen, true)
+		} else {
+			if err != nil {
+				return setRoomErrorStatus(&room.Listening, false, err)
+			}
+			setRoomStatus(&room.Listen, false)
+		}
+	case "record":
+		if action == "start" {
+			if err != nil {
+				return setRoomErrorStatus(&room.Recordind, true, err)
+			}
+			setRoomStatus(&room.Record, true)
+		} else {
+			if err != nil {
+				return setRoomErrorStatus(&room.Recordind, false, err)
+			}
+			setRoomStatus(&room.Record, false)
+		}
+	case "push":
+		if action == "start" {
+			if err != nil {
+				return setRoomErrorStatus(&room.Pushing, true, err)
+			}
+			setRoomStatus(&room.Push, true)
+		} else {
+			if err != nil {
+				return setRoomErrorStatus(&room.Pushing, false, err)
+			}
+			setRoomStatus(&room.Push, false)
+		}
+	}
+
+	return nil
+}
+
+func mainHandler(writer http.ResponseWriter, r *http.Request) {
 	inst := instance.GetInstance(r.Context())
-	// 获取请求中的变量
 	vars := mux.Vars(r)
 	resp := commonResp{}
-	// 根据直播 ID 查找直播
-	live, ok := inst.Lives[live.ID(vars["id"])]
-	if !ok {
-		// 直播不存在，返回错误响应
-		resp.ErrNo = http.StatusNotFound
+
+	live, exists := inst.Lives[live.ID(vars["id"])]
+	if !exists {
+		resp.ErrNo = http.StatusBadRequest
 		resp.ErrMsg = fmt.Sprintf("live id: %s 找不到", vars["id"])
 		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
 		return
 	}
-	// 根据直播 URL 获取房间信息
+
 	room, err := inst.Config.GetLiveRoomByUrl(live.GetRawUrl())
 	if err != nil {
 		resp.ErrNo = http.StatusNotFound
@@ -658,44 +697,27 @@ func parseRtmpAction(writer http.ResponseWriter, r *http.Request) {
 		writeJsonWithStatusCode(writer, http.StatusNotFound, resp)
 		return
 	}
-	// 根据请求的操作执行相应的操作
-	switch vars["action"] {
-	case "start":
-		if err := startPushing(r.Context(), live); err != nil {
-			resp.ErrNo = http.StatusBadRequest
-			resp.ErrMsg = err.Error()
-			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
-			return
-		} else {
-			room.IsPush = true
-		}
-	case "stop":
-		if err := stopPushing(r.Context(), live.GetLiveId()); err != nil {
-			resp.ErrNo = http.StatusBadRequest
-			resp.ErrMsg = err.Error()
-			writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
-			return
-		} else {
-			room.IsPush = false
-		}
-	default:
+
+	resource, exists := vars["resource"]
+	_, isExists := actionMap[resource]
+	if !exists && isExists {
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, fmt.Sprintf("无效资源：%s", vars["resource"]))
+		return
+	}
+
+	action, exists := vars["action"]
+	_, isExists = actionMap[resource]
+	if !exists && !isExists {
+		writeJsonWithStatusCode(writer, http.StatusBadRequest, fmt.Sprintf("无效操作：%s", vars["action"]))
+		return
+	}
+
+	if err := executeAction(r.Context(), live, room, resource, action); err != nil {
 		resp.ErrNo = http.StatusBadRequest
-		resp.ErrMsg = fmt.Sprintf("无效操作：%s", vars["action"])
+		resp.ErrMsg = err.Error()
 		writeJsonWithStatusCode(writer, http.StatusBadRequest, resp)
 		return
 	}
-	// 解析直播信息并返回
+
 	writeJSON(writer, parseInfo(r.Context(), live))
-}
-
-// 开始监听直播
-func startPushing(ctx context.Context, live live.Live) error {
-	inst := instance.GetInstance(ctx)
-	return inst.ListenerManager.(listeners.Manager).AddListener(ctx, live)
-}
-
-// 停止监听直播
-func stopPushing(ctx context.Context, liveId live.ID) error {
-	inst := instance.GetInstance(ctx)
-	return inst.ListenerManager.(listeners.Manager).RemoveListener(ctx, liveId)
 }
