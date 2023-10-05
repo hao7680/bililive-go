@@ -56,8 +56,8 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 		// 获取直播间配置
 		room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
 
-		// 如果未开启推送则退出
-		if room.Push && room.Rtmp != "" {
+		// 如果未开启监听、推送或者rtmp为空则退出
+		if !room.Listen || !room.Push || room.Rtmp == "" {
 			return
 		}
 
@@ -123,9 +123,19 @@ func (m *manager) AddPusher(ctx context.Context, live live.Live) error {
 	// 获取直播间配置
 	room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
 
-	//如果不存在Rtmp 则退出
+	//如果未启用监听，则退出
+	if !room.Listen {
+		return ErrListenNotEnabled
+	}
+
+	//如果不存在Rtmp，则退出
 	if room.Rtmp == "" {
 		return ErrRtmpNotExist
+	}
+
+	//如果未启用推送，则退出
+	if !room.Push {
+		return ErrPushNotEnabled
 	}
 
 	// 1. 加锁以同步操作。

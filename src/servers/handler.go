@@ -41,14 +41,10 @@ func parseInfo(ctx context.Context, l live.Live) *live.Info {
 	// 使用 URL 从配置中获取房间信息
 	room, err := inst.Config.GetLiveRoomByUrl(live_url)
 	if err == nil {
-		// 获取房间的推流地址（RTMP）
-		rtmp := room.Rtmp
-		// 将推流地址赋给 info 结构的字段
-		info.RtmpUrl = rtmp
-		// 获取房间的推流地址（RTMP）
-		isPush := room.Push
-		// 将是否推流赋给 info 结构的字段
-		info.Push = isPush
+		info.Listen = room.Listen
+		info.Record = room.Record
+		info.Push = room.Push
+		info.RtmpUrl = room.Rtmp
 	}
 
 	// 检查是否有监听器和录制器，并将结果存储在相应的字段中
@@ -559,54 +555,40 @@ var actionMap = map[string]map[string]ActionFunc{
 	"listen": {
 		"start": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.ListenerManager.(listeners.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert ListenerManager to listeners.Manager")
-			}
+			manager, _ := inst.ListenerManager.(listeners.Manager)
 			return manager.AddListener(ctx, live)
 		},
 		"stop": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.ListenerManager.(listeners.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert ListenerManager to listeners.Manager")
-			}
-			return manager.RemoveListener(ctx, live.GetLiveId())
+			lm, _ := inst.ListenerManager.(listeners.Manager)
+			rm, _ := inst.RecorderManager.(recorders.Manager)
+			pm, _ := inst.PusherManager.(pushers.Manager)
+			rm.RemoveRecorder(ctx, live.GetLiveId())
+			pm.RemovePusher(ctx, live.GetLiveId())
+			return lm.RemoveListener(ctx, live.GetLiveId())
 		},
 	},
 	"record": {
 		"start": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.RecorderManager.(recorders.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert RecorderManager to recorders.Manager")
-			}
+			manager, _ := inst.RecorderManager.(recorders.Manager)
 			return manager.AddRecorder(ctx, live)
 		},
 		"stop": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.RecorderManager.(recorders.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert RecorderManager to recorders.Manager")
-			}
+			manager, _ := inst.RecorderManager.(recorders.Manager)
 			return manager.RemoveRecorder(ctx, live.GetLiveId())
 		},
 	},
 	"push": {
 		"start": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.PusherManager.(pushers.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert PusherManager to pushers.Manager")
-			}
+			manager, _ := inst.PusherManager.(pushers.Manager)
 			return manager.AddPusher(ctx, live)
 		},
 		"stop": func(ctx context.Context, live live.Live) error {
 			inst := instance.GetInstance(ctx)
-			manager, ok := inst.PusherManager.(pushers.Manager)
-			if !ok {
-				return fmt.Errorf("cannot convert PusherManager to pushers.Manager")
-			}
+			manager, _ := inst.PusherManager.(pushers.Manager)
 			return manager.RemovePusher(ctx, live.GetLiveId())
 		},
 	},
@@ -633,44 +615,48 @@ func executeAction(ctx context.Context, live live.Live, room *configs.LiveRoom, 
 		return errors.New("无效操作: " + action)
 	}
 
-	err := actionMap[resource][action](ctx, live)
-
 	switch resource {
 	case "listen":
 		if action == "start" {
+			setRoomStatus(&room.Listen, true)
+			err := actionMap[resource][action](ctx, live)
 			if err != nil {
 				return setRoomErrorStatus(&room.Listening, true, err)
 			}
-			setRoomStatus(&room.Listen, true)
 		} else {
+			err := actionMap[resource][action](ctx, live)
+			setRoomStatus(&room.Listen, false)
 			if err != nil {
 				return setRoomErrorStatus(&room.Listening, false, err)
 			}
-			setRoomStatus(&room.Listen, false)
 		}
 	case "record":
 		if action == "start" {
+			setRoomStatus(&room.Record, true)
+			err := actionMap[resource][action](ctx, live)
 			if err != nil {
 				return setRoomErrorStatus(&room.Recordind, true, err)
 			}
-			setRoomStatus(&room.Record, true)
 		} else {
+			setRoomStatus(&room.Record, false)
+			err := actionMap[resource][action](ctx, live)
 			if err != nil {
 				return setRoomErrorStatus(&room.Recordind, false, err)
 			}
-			setRoomStatus(&room.Record, false)
 		}
 	case "push":
 		if action == "start" {
+			setRoomStatus(&room.Push, true)
+			err := actionMap[resource][action](ctx, live)
 			if err != nil {
 				return setRoomErrorStatus(&room.Pushing, true, err)
 			}
-			setRoomStatus(&room.Push, true)
 		} else {
+			setRoomStatus(&room.Push, false)
+			err := actionMap[resource][action](ctx, live)
 			if err != nil {
 				return setRoomErrorStatus(&room.Pushing, false, err)
 			}
-			setRoomStatus(&room.Push, false)
 		}
 	}
 

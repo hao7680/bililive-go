@@ -16,8 +16,8 @@ import (
 // NewManager 创建一个新的 Recorder Manager 实例。
 func NewManager(ctx context.Context) Manager {
 	rm := &manager{
-		savers: make(map[live.ID]Recorder),
-		cfg:    instance.GetInstance(ctx).Config,
+		recorders: make(map[live.ID]Recorder),
+		cfg:       instance.GetInstance(ctx).Config,
 	}
 	instance.GetInstance(ctx).RecorderManager = rm
 
@@ -41,9 +41,9 @@ var (
 
 // manager 是 Recorder Manager 的实现。
 type manager struct {
-	lock   sync.RWMutex
-	savers map[live.ID]Recorder
-	cfg    *configs.Config
+	lock      sync.RWMutex
+	recorders map[live.ID]Recorder
+	cfg       *configs.Config
 }
 
 // registryListener 注册事件监听器以响应直播开始、房间名称更改、监听停止等事件。
@@ -61,8 +61,8 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 		// 获取直播间配置
 		room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
 
-		// 如果未开启录制则退出
-		if !room.Record {
+		// 如果未开启监听、录制则退出
+		if !room.Listen || !room.Record {
 			return
 		}
 
@@ -125,9 +125,9 @@ func (m *manager) Close(ctx context.Context) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	// 2. 关闭所有活跃的录制器。
-	for id, recorder := range m.savers {
+	for id, recorder := range m.recorders {
 		recorder.Close()
-		delete(m.savers, id)
+		delete(m.recorders, id)
 	}
 	// 3. 减少等待组的计数。
 	inst := instance.GetInstance(ctx)
@@ -136,11 +136,31 @@ func (m *manager) Close(ctx context.Context) {
 
 // AddRecorder 添加一个录制器。
 func (m *manager) AddRecorder(ctx context.Context, live live.Live) error {
+
+	// 获取应用程序实例
+	inst := instance.GetInstance(ctx)
+
+	// 获取应用程序配置
+	config := inst.Config
+
+	// 获取直播间配置
+	room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
+
+	//如果未启用监听，则退出
+	if !room.Listen {
+		return ErrListenNotEnabled
+	}
+
+	//如果未启用录制，则退出
+	if !room.Record {
+		return ErrRecordNotEnabled
+	}
+
 	// 1. 加锁以同步操作。
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	// 2. 检查是否已存在该录制器。
-	if _, ok := m.savers[live.GetLiveId()]; ok {
+	if _, ok := m.recorders[live.GetLiveId()]; ok {
 		return ErrRecorderExist
 	}
 	// 3. 创建新的录制器。
@@ -149,7 +169,7 @@ func (m *manager) AddRecorder(ctx context.Context, live live.Live) error {
 		return err
 	}
 	// 4. 将新录制器添加到管理器。
-	m.savers[live.GetLiveId()] = recorder
+	m.recorders[live.GetLiveId()] = recorder
 	// 5. 如果配置了视频分割，启动定时重启任务。
 	if maxDur := m.cfg.VideoSplitStrategies.MaxDuration; maxDur != 0 {
 		go m.cronRestart(ctx, live)
@@ -197,14 +217,14 @@ func (m *manager) RemoveRecorder(ctx context.Context, liveId live.ID) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	// 2. 检查录制器是否存在。
-	recorder, ok := m.savers[liveId]
+	recorder, ok := m.recorders[liveId]
 	if !ok {
 		return ErrRecorderNotExist
 	}
 	// 3. 关闭录制器。
 	recorder.Close()
 	// 4. 从管理器中移除录制器。
-	delete(m.savers, liveId)
+	delete(m.recorders, liveId)
 	return nil
 }
 
@@ -214,7 +234,7 @@ func (m *manager) GetRecorder(ctx context.Context, liveId live.ID) (Recorder, er
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	// 2. 尝试获取指定的录制器。
-	r, ok := m.savers[liveId]
+	r, ok := m.recorders[liveId]
 	if !ok {
 		return nil, ErrRecorderNotExist
 	}
@@ -227,6 +247,6 @@ func (m *manager) HasRecorder(ctx context.Context, liveId live.ID) bool {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	// 2. 检查录制器是否存在。
-	_, ok := m.savers[liveId]
+	_, ok := m.recorders[liveId]
 	return ok
 }

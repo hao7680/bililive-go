@@ -12,7 +12,12 @@ log:
 feature:
   use_native_flv_parser: false
   remove_symbol_other_character: false
-live_rooms: []
+live_rooms:
+- url: https://www.douyu.com/9999?dyshid=0-c74c82500bdaa7990ec4710000021601
+  listen: false
+  quality: 0
+  rtmp: rtmp://a.rtmp.youtube.com/live2/65q3-db7j-qbw7-z4w5-f8ze
+  push: false
 out_put_tmpl: ""
 video_split_strategies:
   on_room_name_changed: false

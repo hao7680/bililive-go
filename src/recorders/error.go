@@ -11,4 +11,10 @@ var (
 
 	// ErrParserNotSupportStatus 表示解析器不支持获取状态的错误。
 	ErrParserNotSupportStatus = errors.New("parser not support get status")
+
+	// ErrListenNotEnabled 表示监听未启用
+	ErrListenNotEnabled = errors.New("listen is not enabled")
+
+	// ErrRecordNotEnabled 表示录制未启用
+	ErrRecordNotEnabled = errors.New("record is not enabled")
 )

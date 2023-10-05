@@ -18,7 +18,7 @@ var newListener = NewListener
 func NewManager(ctx context.Context) Manager {
 	// 1. 创建一个监听器管理器实例 lm。
 	lm := &manager{
-		savers: make(map[live.ID]Listener),
+		listeners: make(map[live.ID]Listener),
 	}
 
 	// 2. 获取应用程序实例 inst。
@@ -39,8 +39,8 @@ type Manager interface {
 
 // manager 实现了监听器管理器的接口。
 type manager struct {
-	lock   sync.RWMutex
-	savers map[live.ID]Listener
+	lock      sync.RWMutex
+	listeners map[live.ID]Listener
 }
 
 // registryListener 注册监听器，用于监听直播房间初始化完成事件。
@@ -113,9 +113,9 @@ func (m *manager) Close(ctx context.Context) {
 	defer m.lock.Unlock()
 
 	// 2. 遍历所有监听器，关闭它们，并从管理器中移除。
-	for id, listener := range m.savers {
+	for id, listener := range m.listeners {
 		listener.Close()
-		delete(m.savers, id)
+		delete(m.listeners, id)
 	}
 
 	// 3. 获取应用程序实例 inst。
@@ -132,13 +132,13 @@ func (m *manager) AddListener(ctx context.Context, live live.Live) error {
 	defer m.lock.Unlock()
 
 	// 2. 检查是否已经存在相同 LiveId 的监听器。
-	if _, ok := m.savers[live.GetLiveId()]; ok {
+	if _, ok := m.listeners[live.GetLiveId()]; ok {
 		return ErrListenerExist
 	}
 
 	// 3. 创建新的监听器，并将它添加到管理器中。
 	listener := newListener(ctx, live)
-	m.savers[live.GetLiveId()] = listener
+	m.listeners[live.GetLiveId()] = listener
 
 	// 4. 启动新添加的监听器。
 	return listener.Start()
@@ -151,14 +151,14 @@ func (m *manager) RemoveListener(ctx context.Context, liveId live.ID) error {
 	defer m.lock.Unlock()
 
 	// 2. 检查是否存在具有指定 LiveId 的监听器。
-	listener, ok := m.savers[liveId]
+	listener, ok := m.listeners[liveId]
 	if !ok {
 		return ErrListenerNotExist
 	}
 
 	// 3. 关闭监听器并从管理器中移除。
 	listener.Close()
-	delete(m.savers, liveId)
+	delete(m.listeners, liveId)
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (m *manager) replaceListener(ctx context.Context, oldLive live.Live, newLiv
 	oldLiveId := oldLive.GetLiveId()
 
 	// 3. 检查是否存在具有旧 LiveId 的监听器。
-	oldListener, ok := m.savers[oldLiveId]
+	oldListener, ok := m.listeners[oldLiveId]
 	if !ok {
 		return ErrListenerNotExist
 	}
@@ -185,11 +185,11 @@ func (m *manager) replaceListener(ctx context.Context, oldLive live.Live, newLiv
 
 	// 6. 如果新旧 LiveId 相同，将新监听器替换旧监听器。
 	if oldLiveId == newLive.GetLiveId() {
-		m.savers[oldLiveId] = newListener
+		m.listeners[oldLiveId] = newListener
 	} else {
 		// 7. 如果新旧 LiveId 不同，从管理器中删除旧监听器，将新监听器添加到管理器中。
-		delete(m.savers, oldLiveId)
-		m.savers[newLive.GetLiveId()] = newListener
+		delete(m.listeners, oldLiveId)
+		m.listeners[newLive.GetLiveId()] = newListener
 	}
 
 	// 8. 启动新监听器。
@@ -203,7 +203,7 @@ func (m *manager) GetListener(ctx context.Context, liveId live.ID) (Listener, er
 	defer m.lock.RUnlock()
 
 	// 2. 检查是否存在具有指定 LiveId 的监听器。
-	listener, ok := m.savers[liveId]
+	listener, ok := m.listeners[liveId]
 	if !ok {
 		return nil, ErrListenerNotExist
 	}
@@ -219,6 +219,6 @@ func (m *manager) HasListener(ctx context.Context, liveId live.ID) bool {
 	defer m.lock.RUnlock()
 
 	// 2. 检查是否存在具有指定 LiveId 的监听器。
-	_, ok := m.savers[liveId]
+	_, ok := m.listeners[liveId]
 	return ok
 }

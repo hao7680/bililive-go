@@ -14,4 +14,10 @@ var (
 
 	// ErrRtmpNotExist 表示RTMP不存在
 	ErrRtmpNotExist = errors.New("rtmp is not exist")
+
+	// ErrListenNotEnabled 表示监听未启用
+	ErrListenNotEnabled = errors.New("listen is not enabled")
+
+	// ErrPushNotEnabled 表示推送未启用
+	ErrPushNotEnabled = errors.New("push is not enabled")
 )
