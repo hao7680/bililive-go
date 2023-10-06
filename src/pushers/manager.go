@@ -54,10 +54,15 @@ func (m *manager) registryListener(ctx context.Context, ed events.Dispatcher) {
 		config := inst.Config
 
 		// 获取直播间配置
-		room, _ := config.GetLiveRoomByUrl(live.GetRawUrl())
+		room, err := config.GetLiveRoomByUrl(live.GetRawUrl())
 
-		// 如果未开启监听、推送或者rtmp为空则退出
-		if !room.Listen || !room.Push || room.Rtmp == "" {
+		// 如果该配置还未生效则退出
+		if err != nil {
+			return
+		}
+
+		// 如果未开启推送或者rtmp为空则退出
+		if !room.Push || room.Rtmp == "" {
 			return
 		}
 
@@ -126,6 +131,14 @@ func (m *manager) AddPusher(ctx context.Context, live live.Live) error {
 	//如果未启用监听，则退出
 	if !room.Listen {
 		return ErrListenNotEnabled
+	}
+
+	// 是否正在监听
+	room.Listening = inst.ListenerManager.(listeners.Manager).HasListener(ctx, live.GetLiveId())
+
+	//如果房间不是处于正在监听状态，则退出
+	if !room.Listening {
+		return ErrNoListening
 	}
 
 	//如果不存在Rtmp，则退出

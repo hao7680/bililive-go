@@ -48,19 +48,35 @@ class API {
     }
 
     /**
-     * 开始监听直播间
+     * 开始录制直播间
      * @param id 直播间id
      */
     startRecord(id: string) {
-        return utils.requestGet(`${BASE_URL}/lives/${id}/start`);
+        return utils.requestGet(`${BASE_URL}/lives/${id}/record/start`);
     }
 
     /**
-     * 停止监听直播间
+     * 关闭录制直播间
      * @param id 直播间id
      */
     stopRecord(id: string) {
-        return utils.requestGet(`${BASE_URL}/lives/${id}/stop`);
+        return utils.requestGet(`${BASE_URL}/lives/${id}/record/stop`);
+    }
+
+    /**
+     * 开启推流直播间
+     * @param id 直播间id
+     */
+    startPush(id: string) {
+        return utils.requestGet(`${BASE_URL}/lives/${id}/push/start`);
+    }
+
+    /**
+     * 关闭推流直播间
+     * @param id 直播间id
+     */
+    stopPush(id: string) {
+        return utils.requestGet(`${BASE_URL}/lives/${id}/push/stop`);
     }
 
     /**

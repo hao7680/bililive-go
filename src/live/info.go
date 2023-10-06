@@ -9,10 +9,8 @@ type Info struct {
 	Live                          Live
 	HostName, RoomName            string
 	RtmpUrl                       string
-	Listen                        bool
-	Record                        bool
-	Push                          bool
 	Status                        bool // 表示是否正在直播，可能最好重命名为 IsLiving
+	Listen, Record, Push          bool
 	Listening, Recording, Pushing bool
 	Initializing                  bool
 	CustomLiveId                  string

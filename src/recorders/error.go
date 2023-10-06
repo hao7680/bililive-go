@@ -15,6 +15,9 @@ var (
 	// ErrListenNotEnabled 表示监听未启用
 	ErrListenNotEnabled = errors.New("listen is not enabled")
 
+	// ErrListenNotEnabled 表示未处于正在监听状态
+	ErrNoListening = errors.New("listening is not going on")
+
 	// ErrRecordNotEnabled 表示录制未启用
 	ErrRecordNotEnabled = errors.New("record is not enabled")
 )

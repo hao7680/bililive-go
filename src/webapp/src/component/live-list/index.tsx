@@ -26,7 +26,12 @@ interface ItemData {
     room: Room,
     address: string,
     tags: string[],
+    listen: boolean
+    record: boolean
+    push: boolean
     listening: boolean
+    recording: boolean
+    pushing: boolean
     roomId: string
 }
 
@@ -42,12 +47,12 @@ class LiveList extends React.Component<Props, IState> {
     timer!: NodeJS.Timeout;
 
     runStatus = {
-        title: '运行状态',
-        key: 'tags',
-        dataIndex: 'tags',
-        render: (tags: { map: (arg0: (tag: any) => JSX.Element) => React.ReactNode; }) => (
+        title: '录制状态',
+        key: 'recordTags',
+        dataIndex: 'recordTags',
+        render: (recordTags: { map: (arg0: (tag: any) => JSX.Element) => React.ReactNode; }) => (
             <span>
-                {tags.map(tag => {
+                {recordTags.map(tag => {
                     let color = 'green';
                     if (tag === '已停止') {
                         color = 'grey';
@@ -72,43 +77,102 @@ class LiveList extends React.Component<Props, IState> {
         ),
     };
 
+    pushStatus = {
+        title: '推流状态',
+        key: 'pushTags',
+        dataIndex: 'pushTags',
+        render: (pushTags: { map: (arg0: (tag: any) => JSX.Element) => React.ReactNode; }) => (
+            <span>
+                {pushTags.map(tag => {
+                    let color = 'green';
+                    if (tag === '已停止') {
+                        color = 'grey';
+                    }
+                    if (tag === '监控中') {
+                        color = 'green';
+                    }
+                    if (tag === '推流中') {
+                        color = 'red';
+                    }
+                    if (tag === '初始化') {
+                        color = 'orange';
+                    }
+
+                    return (
+                        <Tag color={color} key={tag}>
+                            {tag.toUpperCase()}
+                        </Tag>
+                    );
+                })}
+            </span>
+        ),
+    };
+
     runAction = {
         title: '操作',
         key: 'action',
-        dataIndex: 'listening',
-        render: (listening: boolean, data: ItemData) => (
+        dataIndex: 'action',
+        render: (text: string, record: ItemData) => (
             <span>
                 <PopDialog
-                    title={listening ? "确定停止监控？" : "确定开启监控？"}
+                    title={record.record ? "确定关闭录制？" : "确定开启录制？"}
                     onConfirm={(e) => {
-                        if (listening) {
+                        if (record.record) {
                             //停止监控
-                            api.stopRecord(data.roomId)
+                            api.stopRecord(record.roomId)
                                 .then(rsp => {
                                     api.saveSettingsInBackground();
                                     this.refresh();
                                 })
                                 .catch(err => {
-                                    alert(`停止监控失败:\n${err}`);
+                                    alert(`关闭录制失败:\n${err}`);
                                 });
                         } else {
                             //开启监控
-                            api.startRecord(data.roomId)
+                            api.startRecord(record.roomId)
                                 .then(rsp => {
                                     api.saveSettingsInBackground();
                                     this.refresh();
                                 })
                                 .catch(err => {
-                                    alert(`开启监控失败:\n${err}`);
+                                    alert(`开启录制失败:\n${err}`);
                                 });
                         }
                     }}>
-                    <Button type="link" size="small">{listening ? "停止监控" : "开启监控"}</Button>
+                    <Button type="link" size="small">{record.record ? "关闭录制" : "开启录制"}</Button>
+                </PopDialog>
+                <Divider type="vertical" />
+                <PopDialog
+                    title={record.push ? "确定关闭推流？" : "确定开启推流？"}
+                    onConfirm={(e) => {
+                        if (record.push) {
+                            //停止监控
+                            api.stopPush(record.roomId)
+                                .then(rsp => {
+                                    api.saveSettingsInBackground();
+                                    this.refresh();
+                                })
+                                .catch(err => {
+                                    alert(`关闭推流失败:\n${err}`);
+                                });
+                        } else {
+                            //开启监控
+                            api.startPush(record.roomId)
+                                .then(rsp => {
+                                    api.saveSettingsInBackground();
+                                    this.refresh();
+                                })
+                                .catch(err => {
+                                    alert(`开启推流失败:\n${err}`);
+                                });
+                        }
+                    }}>
+                    <Button type="link" size="small">{record.push ? "关闭推流" : "开启推流"}</Button>
                 </PopDialog>
                 <Divider type="vertical" />
                 <PopDialog title="确定删除当前直播间？"
                     onConfirm={(e) => {
-                        api.deleteRoom(data.roomId)
+                        api.deleteRoom(record.roomId)
                             .then(rsp => {
                                 api.saveSettingsInBackground();
                                 this.refresh();
@@ -121,7 +185,7 @@ class LiveList extends React.Component<Props, IState> {
                 </PopDialog>
                 <Divider type="vertical" />
                 <Button type="link" size="small" onClick={(e) => {
-                    this.props.history.push(`/fileList/${data.address}/${data.name}`);
+                    this.props.history.push(`/fileList/${record.address}/${record.name}`);
                 }}>文件</Button>
             </span>
         ),
@@ -145,6 +209,7 @@ class LiveList extends React.Component<Props, IState> {
             key: 'address',
         },
         this.runStatus,
+        this.pushStatus,
         this.runAction
     ];
 
@@ -226,19 +291,31 @@ class LiveList extends React.Component<Props, IState> {
                 }
                 return rsp.map((item: any, index: number) => {
                     //判断标签状态
-                    let tags;
-                    if (item.listening === true) {
-                        tags = ['监控中'];
+                    let recordTags, pushTags;
+
+                    if (item.record === true) {
+                        recordTags = ['监控中'];
                     } else {
-                        tags = ['已停止'];
+                        recordTags = ['已停止'];
                     }
 
                     if (item.recording === true) {
-                        tags = ['录制中'];
+                        recordTags = ['录制中'];
+                    }
+
+                    if (item.push === true) {
+                        pushTags = ['监控中'];
+                    } else {
+                        pushTags = ['已停止'];
+                    }
+
+                    if (item.pushing === true) {
+                        pushTags = ['推流中'];
                     }
 
                     if (item.initializing === true) {
-                        tags.push('初始化')
+                        recordTags.push('初始化')
+                        pushTags.push('初始化')
                     }
 
                     return {
@@ -249,8 +326,14 @@ class LiveList extends React.Component<Props, IState> {
                             url: item.live_url
                         },
                         address: item.platform_cn_name,
-                        tags,
+                        recordTags,
+                        pushTags,
+                        listen: item.listen,
+                        record: item.record,
+                        push: item.push,
                         listening: item.listening,
+                        recording: item.recording,
+                        pushing: item.pushing,
                         roomId: item.id
                     };
                 });
@@ -282,8 +365,7 @@ class LiveList extends React.Component<Props, IState> {
                         ]}>
                     </PageHeader>
                 </div>
-                <Table className="item-pad" columns={
-                    (this.state.window.screen.width > 768) ? this.columns : this.smallColums}
+                <Table className="item-pad" columns={(this.state.window.screen.width > 768) ? this.columns : this.smallColums}
                     dataSource={this.state.list}
                     size={(this.state.window.screen.width > 768) ? "default" : "middle"}
                     pagination={false} />

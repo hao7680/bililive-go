@@ -38,6 +38,8 @@ func initMux(ctx context.Context) *mux.Router {
 		})
 	}, log) // 使用 log 中间件记录请求日志
 
+	var wsManager = NewWebSocketManager(ctx)
+
 	// 设置 API 路由
 	apiRoute := m.PathPrefix(apiRouterPrefix).Subrouter()
 	apiRoute.Use(mux.CORSMethodMiddleware(apiRoute))
@@ -52,9 +54,10 @@ func initMux(ctx context.Context) *mux.Router {
 	apiRoute.HandleFunc("/lives/{id}", removeLive).Methods("DELETE")
 	apiRoute.HandleFunc("/lives/{id}/{action}", mainHandler).Methods("GET")
 	apiRoute.HandleFunc("/file/{path:.*}", getFileInfo).Methods("GET")
-	apiRoute.HandleFunc("/lives/{id}/rtmp", addRtmp).Methods("POST")
+	apiRoute.HandleFunc("/lives/{id}/push", setRtmp).Methods("put")
 	apiRoute.HandleFunc("/lives/{id}/{resource}/{action}", mainHandler).Methods("GET")
 	apiRoute.Handle("/metrics", promhttp.Handler()) // 用于处理 Prometheus 监控数据
+	m.HandleFunc("/ws", wsManager.HandleConnection) //开启websocket服务器
 
 	// 设置静态文件服务
 	m.PathPrefix("/files/").Handler(http.StripPrefix("/files/", http.FileServer(http.Dir(instance.GetInstance(ctx).Config.OutPutPath))))
@@ -81,7 +84,9 @@ func NewServer(ctx context.Context) *Server {
 		Addr:    config.RPC.Bind,
 		Handler: initMux(ctx),
 	}
-	server := &Server{server: httpServer}
+	server := &Server{
+		server: httpServer,
+	}
 	inst.Server = server
 	return server
 }

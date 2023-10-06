@@ -4,6 +4,7 @@ package douyu
 import (
 	// 导入所需的包和库
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -231,6 +232,15 @@ func (l *Live) GetInfo() (info *live.Info, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var result map[string]interface{}
+
+	err = json.Unmarshal(body, &result)
+
+	if err != nil {
+		print(body)
+	}
+
 	info = &live.Info{
 		Live:         l,
 		HostName:     gjson.GetBytes(body, "room.owner_name").String(),

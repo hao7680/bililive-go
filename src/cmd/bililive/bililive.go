@@ -25,6 +25,7 @@ import (
 	"github.com/yuhaohwang/bililive-go/src/pkg/utils"
 	"github.com/yuhaohwang/bililive-go/src/pushers"
 	"github.com/yuhaohwang/bililive-go/src/recorders"
+	"github.com/yuhaohwang/bililive-go/src/rtmp"
 	"github.com/yuhaohwang/bililive-go/src/servers"
 )
 
@@ -167,6 +168,13 @@ func main() {
 	}
 	if err := pm.Start(ctx); err != nil {
 		logger.Fatalf("初始化推送器管理器失败，错误: %s", err)
+	}
+
+	// 创建rtmp自动配置器
+	rtmpAutoConfig := rtmp.NewRtmp(ctx)
+
+	if err := rtmpAutoConfig.Start(); err != nil {
+		logger.Fatalf("初始化RTMP自动配置器失败，错误: %s", err)
 	}
 
 	// 初始化指标收集器并启动它。

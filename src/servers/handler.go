@@ -50,6 +50,7 @@ func parseInfo(ctx context.Context, l live.Live) *live.Info {
 	// 检查是否有监听器和录制器，并将结果存储在相应的字段中
 	info.Listening = inst.ListenerManager.(listeners.Manager).HasListener(ctx, l.GetLiveId())
 	info.Recording = inst.RecorderManager.(recorders.Manager).HasRecorder(ctx, l.GetLiveId())
+	info.Pushing = inst.PusherManager.(pushers.Manager).HasPusher(ctx, l.GetLiveId())
 
 	// 返回填充好数据的 live.Info 结构
 	return info
@@ -126,12 +127,13 @@ func addLives(writer http.ResponseWriter, r *http.Request) {
 	errorMessages := make([]string, 0, 4)
 	// 遍历请求中的直播信息
 	gjson.ParseBytes(b).ForEach(func(key, value gjson.Result) bool {
-		isListen := value.Get("listen").Bool()
 		urlStr := strings.Trim(value.Get("url").String(), " ")
-		isPush := value.Get("push").Bool()
+		isListen := value.Get("listen").Bool()
+		isRecord := value.Get("record").Bool()
 		rtmpStr := strings.Trim(value.Get("rtmp").String(), " ")
+		isPush := value.Get("push").Bool()
 		// 调用添加直播信息的实现函数
-		if retInfo, err := addLiveImpl(r.Context(), urlStr, isListen, rtmpStr, isPush); err != nil {
+		if retInfo, err := addLiveImpl(r.Context(), urlStr, isListen, isRecord, rtmpStr, isPush); err != nil {
 			msg := urlStr + "：" + err.Error()
 			inst.Logger.Error(msg)
 			errorMessages = append(errorMessages, msg)
@@ -148,7 +150,7 @@ func addLives(writer http.ResponseWriter, r *http.Request) {
 }
 
 // 添加直播信息的实现函数
-func addLiveImpl(ctx context.Context, urlStr string, isListen bool, rtmpStr string, isPush bool) (info *live.Info, err error) {
+func addLiveImpl(ctx context.Context, urlStr string, isListen bool, isRecord bool, rtmpStr string, isPush bool) (info *live.Info, err error) {
 	// 如果 URL 不以 "http://" 或 "https://" 开头，则添加 "https://" 前缀
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
 		urlStr = "https://" + urlStr
@@ -179,6 +181,9 @@ func addLiveImpl(ctx context.Context, urlStr string, isListen bool, rtmpStr stri
 		}
 		info = parseInfo(ctx, newLive)
 
+		info.Listen = isListen
+		info.Record = isRecord
+
 		// 如果rtmp不为空则添加相关字段
 		if rtmpStr != "" {
 			// 如果 RTMP 不以 "rtmp://" 或 "rtmps://" 开头，则添加 "rtmp://" 前缀
@@ -195,9 +200,10 @@ func addLiveImpl(ctx context.Context, urlStr string, isListen bool, rtmpStr stri
 		}
 
 		liveRoom := configs.LiveRoom{
+			LiveId: newLive.GetLiveId(),
 			Url:    u.String(),
 			Listen: isListen,
-			LiveId: newLive.GetLiveId(),
+			Record: isRecord,
 			Rtmp:   rtmpStr,
 			Push:   isPush,
 		}
@@ -357,7 +363,7 @@ func applyLiveRoomsByConfig(ctx context.Context, newLiveRooms []configs.LiveRoom
 		newUrlMap[newRoom.Url] = &newRoom
 		if room, err := currentConfig.GetLiveRoomByUrl(newRoom.Url); err != nil {
 			// 添加直播信息
-			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.Listen, newRoom.Rtmp, newRoom.Push); err != nil {
+			if _, err := addLiveImpl(ctx, newRoom.Url, newRoom.Listen, newRoom.Record, newRoom.Rtmp, newRoom.Push); err != nil {
 				return err
 			}
 		} else {
@@ -475,8 +481,8 @@ func getFileInfo(writer http.ResponseWriter, r *http.Request) {
 	writeJSON(writer, json)
 }
 
-// 添加直播转推地址的实现函数
-func addRtmp(writer http.ResponseWriter, r *http.Request) {
+// 设置直播转推地址的实现函数
+func setRtmp(writer http.ResponseWriter, r *http.Request) {
 	// 读取请求的数据
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -513,19 +519,12 @@ func addRtmp(writer http.ResponseWriter, r *http.Request) {
 	}
 
 	rtmpValue, rtmpExists := result.Get("rtmp").Value().(string)
-	isPushValue, isPushExists := result.Get("push").Value().(bool)
 
-	if !rtmpExists || !isPushExists {
+	if !rtmpExists {
 		// 处理缺少必要字段的情况
 		errMsg := ""
 		if !rtmpExists {
 			errMsg = "rtmp参数不存在"
-		}
-		if !isPushExists {
-			if errMsg != "" {
-				errMsg += "和"
-			}
-			errMsg += "push参数不存在"
 		}
 		writeJSON(writer, commonResp{
 			ErrMsg: errMsg,
@@ -541,7 +540,6 @@ func addRtmp(writer http.ResponseWriter, r *http.Request) {
 	}
 
 	room.Rtmp = rtmpStr
-	room.Push = isPushValue
 
 	// 返回成功响应
 	writeJsonWithStatusCode(writer, http.StatusOK, commonResp{
@@ -595,13 +593,8 @@ var actionMap = map[string]map[string]ActionFunc{
 }
 
 func executeAction(ctx context.Context, live live.Live, room *configs.LiveRoom, resource string, action string) error {
-	setRoomStatus := func(field *bool, status bool) {
-		*field = status
-	}
-
-	setRoomErrorStatus := func(field *bool, status bool, err error) error {
-		*field = status
-		return err
+	setRoomStatus := func(target *bool, status bool) {
+		*target = status
 	}
 
 	_, exists := actionMap[resource]
@@ -615,52 +608,81 @@ func executeAction(ctx context.Context, live live.Live, room *configs.LiveRoom, 
 		return errors.New("无效操作: " + action)
 	}
 
+	err := errors.New("")
+
 	switch resource {
 	case "listen":
 		if action == "start" {
 			setRoomStatus(&room.Listen, true)
-			err := actionMap[resource][action](ctx, live)
-			if err != nil {
-				return setRoomErrorStatus(&room.Listening, true, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Listening, true)
+				return err
 			}
 		} else {
-			err := actionMap[resource][action](ctx, live)
 			setRoomStatus(&room.Listen, false)
-			if err != nil {
-				return setRoomErrorStatus(&room.Listening, false, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Listening, false)
+				return err
 			}
 		}
 	case "record":
 		if action == "start" {
+			if !room.Listen {
+				setRoomStatus(&room.Listen, true)
+				if err = actionMap["listen"][action](ctx, live); err != nil {
+					setRoomStatus(&room.Listening, true)
+				}
+			}
 			setRoomStatus(&room.Record, true)
-			err := actionMap[resource][action](ctx, live)
-			if err != nil {
-				return setRoomErrorStatus(&room.Recordind, true, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Recordind, true)
+				return err
 			}
 		} else {
 			setRoomStatus(&room.Record, false)
-			err := actionMap[resource][action](ctx, live)
-			if err != nil {
-				return setRoomErrorStatus(&room.Recordind, false, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Recordind, false)
+				return err
+			}
+			if !room.Record && !room.Push {
+				setRoomStatus(&room.Listen, false)
+				if err = actionMap["listen"][action](ctx, live); err != nil {
+					setRoomStatus(&room.Listening, false)
+				}
 			}
 		}
 	case "push":
 		if action == "start" {
+			if room.Rtmp == "" {
+				return errors.New("RTMP地址不存在")
+			}
+			if !room.Listen {
+				setRoomStatus(&room.Listen, true)
+				if err = actionMap["listen"][action](ctx, live); err != nil {
+					setRoomStatus(&room.Listening, true)
+				}
+			}
 			setRoomStatus(&room.Push, true)
-			err := actionMap[resource][action](ctx, live)
-			if err != nil {
-				return setRoomErrorStatus(&room.Pushing, true, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Pushing, true)
+				return err
 			}
 		} else {
 			setRoomStatus(&room.Push, false)
-			err := actionMap[resource][action](ctx, live)
-			if err != nil {
-				return setRoomErrorStatus(&room.Pushing, false, err)
+			if err = actionMap[resource][action](ctx, live); err != nil {
+				setRoomStatus(&room.Pushing, false)
+				return err
+			}
+			if !room.Record && !room.Push {
+				setRoomStatus(&room.Listen, false)
+				if err = actionMap["listen"][action](ctx, live); err != nil {
+					setRoomStatus(&room.Listening, false)
+				}
 			}
 		}
 	}
 
-	return nil
+	return err
 }
 
 func mainHandler(writer http.ResponseWriter, r *http.Request) {
@@ -685,8 +707,16 @@ func mainHandler(writer http.ResponseWriter, r *http.Request) {
 	}
 
 	resource, exists := vars["resource"]
+
+	// 如果不存在资源字段，默认设置资源为listen字段
+	if !exists {
+		resource = "listen"
+	}
+
 	_, isExists := actionMap[resource]
-	if !exists && isExists {
+
+	// 如果存在资源字段，但是无效资源
+	if exists && !isExists {
 		writeJsonWithStatusCode(writer, http.StatusBadRequest, fmt.Sprintf("无效资源：%s", vars["resource"]))
 		return
 	}

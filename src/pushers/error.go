@@ -18,6 +18,9 @@ var (
 	// ErrListenNotEnabled 表示监听未启用
 	ErrListenNotEnabled = errors.New("listen is not enabled")
 
+	// ErrListenNotEnabled 表示未处于正在监听状态
+	ErrNoListening = errors.New("listening is not going on")
+
 	// ErrPushNotEnabled 表示推送未启用
 	ErrPushNotEnabled = errors.New("push is not enabled")
 )

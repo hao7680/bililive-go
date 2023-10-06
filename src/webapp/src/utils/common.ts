@@ -4,44 +4,21 @@
  * @Description: common utils
  */
 
-function customFetch(arg1: Parameters<typeof fetch>[0], ...args: any[]) {
-    return new Promise((resolve, reject) => {
-        fetch.call(null, arg1, ...args)
-            .then(rsp => {
-                if (rsp.ok) {
-                    return rsp.json();
-                } else {
-                    const clonedRsp = rsp.clone();
-                    return rsp.json()
-                        .catch(err => {
-                            return clonedRsp
-                                .text()
-                                .then((err: any) => {
-                                    let message = "";
-                                    if (err) {
-                                        if (err.err_msg) {
-                                            message = err.err_msg;
-                                        } else {
-                                            message = err;
-                                        }
-                                    }
-                                    return message;
-                                })
-                                .catch(err => rsp.statusText)
-                                .then(data => {
-                                    reject(data);
-                                    throw (data);
-                                });
-                        });
-                }
-            }).then(data => {
-                resolve(data);
-            }).catch(err => {
-                Utils.alertError();
-                reject(err);
-            });
-    });
+async function customFetch(url: string, options?: RequestInit): Promise<any> {
+    const response = await fetch(url, options);
+    const data = await response.json();
+
+    if (response.ok) {
+        return data;
+    } else {
+        if (data && data.err_msg) {
+            Utils.alertError(data.err_msg);
+        } else {
+            throw new Error('Unknown error');
+        }
+    }
 }
+
 
 class Utils {
     /**
@@ -97,7 +74,7 @@ class Utils {
      * @param err error Object
      */
     static alertError(err?: any) {
-        console.error(err ? err : "Server Error!");
+        alert(err ? err : "Server Error!");
     }
 
     static byteSizeToHumanReadableFileSize(size: number): string {

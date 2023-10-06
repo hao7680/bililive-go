@@ -13,11 +13,15 @@ feature:
   use_native_flv_parser: false
   remove_symbol_other_character: false
 live_rooms:
-- url: https://www.douyu.com/9999?dyshid=0-c74c82500bdaa7990ec4710000021601
-  listen: false
+- url: https://www.douyu.com/92000?dyshid=0-cd40a5be2fbb603eb3c64de900061601&dyshci=350
+  listen: true
+  is_listening: true
+  record: false
+  is_recording: false
   quality: 0
-  rtmp: rtmp://a.rtmp.youtube.com/live2/65q3-db7j-qbw7-z4w5-f8ze
-  push: false
+  rtmp: rtmp://a.rtmp.youtube.com/live2/3tmg-5rup-va4y-xvz8-ap6k
+  push: true
+  is_pushing: false
 out_put_tmpl: ""
 video_split_strategies:
   on_room_name_changed: false
